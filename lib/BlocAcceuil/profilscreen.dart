@@ -1,7 +1,7 @@
 // ignore_for_file: prefer_typing_uninitialized_variables
 
 import 'dart:convert';
-
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
@@ -17,6 +17,15 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  // Couleurs officielles ivoiriennes
+  static const Color primaryColor = Color(0xFFF77F00);
+  static const Color secondaryColor = Color(0xFF009A44);
+  static const Color backgroundColor = Color(0xFFFFFFFF);
+  static const Color textColor = Color(0xFF2D3748);
+  static const Color lightGray = Color(0xFFF7FAFC);
+  static const Color mediumGray = Color(0xFFE2E8F0);
+  static const Color successColor = Color(0xFF38A169);
+
   TextEditingController usernameTextEditingController = TextEditingController();
   TextEditingController motdepasseTextEditingController = TextEditingController();
 
@@ -25,65 +34,393 @@ class _ProfileScreenState extends State<ProfileScreen> {
   TextEditingController matricule = TextEditingController();
   TextEditingController tel = TextEditingController();
   TextEditingController email = TextEditingController();
-  bool _obscureText = true;
-  var image;
-  var userInfo;
 
-  Future getUserInfo() async {
-    final prefs = await SharedPreferences.getInstance();
-    var headers = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-      'Authorization': 'Bearer ${json.decode(prefs.getString('userInfo')!)['token']}'
-    };
-    var request = http.Request('GET', Uri.parse('https://rh.madgi.ci/api/v1/user-info'));
-    request.body = json.encode({'user_id': '${json.decode(prefs.getString('userInfo')!)['user']['id']}'});
-    request.headers.addAll(headers);
-    http.StreamedResponse response = await request.send();
-    final data = await response.stream.bytesToString();
-    final decode = json.decode(data);
-    if (decode['success']) setState(() => userInfo = decode['data']['user']);
-    nom.text = userInfo['nom'] ?? '';
-    matricule.text = userInfo['matricule'] ?? '';
-    tel.text = userInfo['tel'] ?? '';
-    email.text = userInfo['email'] ?? '';
+  bool _obscureText = true;
+  bool _isLoading = false;
+  bool _isSaving = false;
+  var userInfo;
+  XFile? _selectedImage;
+
+  Future<void> getUserInfo() async {
+    setState(() => _isLoading = true);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      var headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': 'Bearer ${json.decode(prefs.getString('userInfo')!)['token']}'
+      };
+      var request = http.Request('GET', Uri.parse('http://192.168.1.12:8000/api/v1/user-info'));
+      request.body = json.encode({'user_id': '${json.decode(prefs.getString('userInfo')!)['user']['id']}'});
+      request.headers.addAll(headers);
+      http.StreamedResponse response = await request.send();
+      final data = await response.stream.bytesToString();
+      final decode = json.decode(data);
+      if (decode['success']) {
+        setState(() => userInfo = decode['data']['user']);
+        nom.text = userInfo['nom'] ?? '';
+        matricule.text = userInfo['matricule'] ?? '';
+        tel.text = userInfo['tel'] ?? '';
+        email.text = userInfo['email'] ?? '';
+      }
+    } catch (e) {
+      print('❌ Erreur chargement infos: $e');
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 
-  Widget _buildTextField(String label, String hint, controller, {bool isPassword = false}) {
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(24),
+          bottomRight: Radius.circular(24),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              IconButton(
+                icon: Icon(Icons.arrow_back, color: primaryColor),
+                onPressed: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const Accueil(),
+                    ),
+                  );
+                },
+              ),
+              Expanded(
+                child: Text(
+                  'Mon profil',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 48), // Pour centrer le titre
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Gérez vos informations personnelles',
+            style: TextStyle(
+              color: textColor.withOpacity(0.6),
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProfileImage() {
+    final hasPhoto = userInfo != null && userInfo['photo'] != null;
+    final hasSelectedImage = _selectedImage != null;
+
+    return Center(
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: 120,
+            height: 120,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: primaryColor.withOpacity(0.3),
+                width: 3,
+              ),
+            ),
+            child: ClipOval(
+              child: _isLoading
+                  ? Center(
+                child: CircularProgressIndicator(color: primaryColor),
+              )
+                  : hasSelectedImage
+                  ? Image.file(
+                File(_selectedImage!.path),
+                fit: BoxFit.cover,
+              )
+                  : hasPhoto
+                  ? Image.network(
+                'https://rh.madgi.ci/${userInfo['photo']}',
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    color: lightGray,
+                    child: Icon(
+                      Icons.person,
+                      color: primaryColor,
+                      size: 48,
+                    ),
+                  );
+                },
+              )
+                  : Container(
+                color: lightGray,
+                child: Icon(
+                  Icons.person,
+                  color: primaryColor,
+                  size: 48,
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 0,
+            right: 0,
+            child: GestureDetector(
+              onTap: _pickImage,
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: primaryColor,
+                  border: Border.all(color: Colors.white, width: 3),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.camera_alt,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextField(
+      String label,
+      String hint,
+      TextEditingController controller, {
+        bool isPassword = false,
+        bool enabled = true,
+        TextInputType keyboardType = TextInputType.text,
+      }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(
-            color: Color(0xFF0F0F0F),
-            fontSize: 16,
+          style: TextStyle(
+            color: textColor,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
           ),
         ),
-        const SizedBox(height: 10),
-        TextField(
-          controller: controller,
-          obscureText: isPassword && _obscureText,
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: const TextStyle(color: Color(0xFF3F3F3F)),
-            filled: true,
-            fillColor: const Color(0xFFFAF7F7),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide.none,
-            ),
-            suffixIcon: isPassword
-                ? IconButton(
-                    icon: Icon(_obscureText ? Icons.visibility_off : Icons.visibility),
-                    onPressed: _togglePasswordVisibility,
-                  )
-                : null,
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.03),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-          style: const TextStyle(color: Colors.black), // Set text color to black
+          child: TextFormField(
+            controller: controller,
+            enabled: enabled,
+            obscureText: isPassword && _obscureText,
+            keyboardType: keyboardType,
+            style: TextStyle(color: textColor),
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: enabled ? Colors.white : lightGray,
+              hintText: hint,
+              hintStyle: TextStyle(color: mediumGray),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: mediumGray, width: 1),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: mediumGray, width: 1),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: primaryColor, width: 2),
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              suffixIcon: isPassword
+                  ? IconButton(
+                icon: Icon(
+                  _obscureText ? Icons.visibility_off : Icons.visibility,
+                  color: mediumGray,
+                ),
+                onPressed: _togglePasswordVisibility,
+              )
+                  : null,
+            ),
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Ce champ est requis';
+              }
+              return null;
+            },
+          ),
         ),
       ],
     );
+  }
+
+  Widget _buildSection(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 24, bottom: 16, left: 24),
+      child: Text(
+        title,
+        style: TextStyle(
+          color: textColor,
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickImage() async {
+    final ImagePicker picker = ImagePicker();
+    try {
+      final XFile? pickedFile = await picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 85,
+      );
+
+      if (pickedFile != null) {
+        setState(() => _selectedImage = pickedFile);
+        await _uploadImage();
+      }
+    } catch (e) {
+      print('❌ Erreur sélection image: $e');
+      _showMessageDialog('Erreur', 'Impossible de sélectionner l\'image');
+    }
+  }
+
+  Future<void> _uploadImage() async {
+    if (_selectedImage == null) return;
+
+    try {
+      setState(() => _isSaving = true);
+
+      final prefs = await SharedPreferences.getInstance();
+      var headers = {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer ${json.decode(prefs.getString('userInfo')!)['token']}'
+      };
+
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('http://192.168.1.12:8000/api/v1/update-user'),
+      );
+
+      request.fields.addAll({
+        'user_id': '${json.decode(prefs.getString('userInfo')!)['user']['id']}'
+      });
+
+      request.files.add(await http.MultipartFile.fromPath(
+        'picture',
+        _selectedImage!.path,
+      ));
+
+      request.headers.addAll(headers);
+
+      http.StreamedResponse response = await request.send();
+      final data = await response.stream.bytesToString();
+      final decode = json.decode(data);
+
+      if (decode['success']) {
+        setState(() => userInfo = decode['data']['user']);
+        _showMessageDialog('Succès', 'Photo mise à jour avec succès');
+      } else {
+        _showMessageDialog('Erreur', decode['message'] ?? 'Erreur lors de la mise à jour');
+      }
+    } catch (e) {
+      print('❌ Erreur upload image: $e');
+      _showMessageDialog('Erreur', 'Erreur réseau lors de l\'upload');
+    } finally {
+      setState(() => _isSaving = false);
+    }
+  }
+
+  Future<void> _updateProfile() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    try {
+      setState(() => _isSaving = true);
+
+      final prefs = await SharedPreferences.getInstance();
+      var headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': 'Bearer ${json.decode(prefs.getString('userInfo')!)['token']}'
+      };
+
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('http://192.168.1.12:8000/api/v1/update-user'),
+      );
+
+      request.fields.addAll({
+        'nom': nom.text,
+        'tel': tel.text,
+        'email': email.text,
+        'user_id': '${json.decode(prefs.getString('userInfo')!)['user']['id']}'
+      });
+
+      if (_selectedImage != null) {
+        request.files.add(await http.MultipartFile.fromPath(
+          'picture',
+          _selectedImage!.path,
+        ));
+      }
+
+      request.headers.addAll(headers);
+
+      http.StreamedResponse response = await request.send();
+      final data = await response.stream.bytesToString();
+      final decode = json.decode(data);
+
+      if (decode['success']) {
+        setState(() => userInfo = decode['data']['user']);
+        _showSuccessDialog('Profil mis à jour avec succès');
+      } else {
+        _showMessageDialog('Erreur', decode['message'] ?? 'Erreur lors de la mise à jour');
+      }
+    } catch (e) {
+      print('❌ Erreur mise à jour profil: $e');
+      _showMessageDialog('Erreur', 'Erreur réseau lors de la mise à jour');
+    } finally {
+      setState(() => _isSaving = false);
+    }
   }
 
   void _togglePasswordVisibility() {
@@ -92,74 +429,144 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
   }
 
-  submit() async {
-    if(_formKey.currentState!.validate()) {
-      final prefs = await SharedPreferences.getInstance();
-      var headers = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization': 'Bearer ${json.decode(prefs.getString('userInfo')!)['token']}'
-      };
-      var request = http.MultipartRequest('POST', Uri.parse('https://rh.madgi.ci/api/v1/update-user'));
-      request.fields.addAll({
-        'nom': nom.text,
-        'tel': tel.text,
-        'email': email.text,
-        'user_id': '${json.decode(prefs.getString('userInfo')!)['user']['id']}'
-      });
-      request.headers.addAll(headers);
-
-      http.StreamedResponse response = await request.send();
-      final data = await response.stream.bytesToString();
-      final decode = json.decode(data);
-      if (decode['success']) setState(() => userInfo = decode['data']['user']);
-      _showErrorDialog(decode['message']);
-    }
-  }
-
-  file() async {
-    final prefs = await SharedPreferences.getInstance();
-    var headers = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-      'Authorization': 'Bearer ${json.decode(prefs.getString('userInfo')!)['token']}'
-    };
-    var request = http.MultipartRequest('POST', Uri.parse('https://rh.madgi.ci/api/v1/update-user'));
-    request.fields.addAll({'user_id': '${json.decode(prefs.getString('userInfo')!)['user']['id']}'});
-    request.files.add(await http.MultipartFile.fromPath('picture', image.path));
-    request.headers.addAll(headers);
-
-    http.StreamedResponse response = await request.send();
-    final data = await response.stream.bytesToString();
-    final decode = json.decode(data);
-    if (decode['success']) setState(() => userInfo = decode['data']['user']);
-    _showErrorDialog(decode['message']);
-  }
-
-  void _showErrorDialog(String message) {
+  void _showSuccessDialog(String message) {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Row(
-          children: [
-            Image.asset(
-              'assets/valider.png', // L'image attention de votre dossier assets
-              width: 24,
-              height: 24,
-            ),
-            const SizedBox(width: 10),
-            const Text('Félicitation'),
-          ],
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
         ),
-        content: Text(message),
-        actions: <Widget>[
-          TextButton(
-            child: const Text('OK'),
-            onPressed: () {
-              Navigator.of(ctx).pop();
-            },
-          )
-        ],
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: successColor.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.check_circle,
+                  color: successColor,
+                  size: 32,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Succès',
+                style: TextStyle(
+                  color: textColor,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: textColor.withOpacity(0.7),
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: secondaryColor,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'Continuer',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showMessageDialog(String title, String message) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                title == 'Succès' ? Icons.check_circle : Icons.error_outline,
+                color: title == 'Succès' ? successColor : primaryColor,
+                size: 48,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                style: TextStyle(
+                  color: textColor,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: textColor.withOpacity(0.7),
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryColor,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'OK',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -173,240 +580,129 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_outlined),
-          onPressed: () {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) => Accueil(),
-              ),
-            );
-          },
-        ),
-        title: const Text('Profil'),
-        centerTitle: true,
-      ),
-      body: SingleChildScrollView(
+      backgroundColor: lightGray,
+      body: SafeArea(
         child: Column(
           children: [
-            // Image de profil et autres éléments
-            Container(
-              padding: const EdgeInsets.only(left: 15, top: 20, right: 15),
-              child: GestureDetector(
-                onTap: () {
-                  FocusScope.of(context).unfocus();
-                },
-                child: Center(
-                  child: Stack(
+            _buildHeader(),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Form(
+                  key: _formKey,
+                  child: Column(
                     children: [
-                      Container(
-                        width: 130,
-                        height: 130,
-                        decoration: BoxDecoration(
-                          border: Border.all(width: 4, color: Colors.white),
-                          boxShadow: [
-                            BoxShadow(
-                              spreadRadius: 2,
-                              blurRadius: 10,
-                              color: Colors.black.withOpacity(0.1),
-                            )
+                      const SizedBox(height: 24),
+                      _buildProfileImage(),
+                      const SizedBox(height: 8),
+                      if (userInfo != null)
+                        Text(
+                          userInfo['nom'] ?? '',
+                          style: TextStyle(
+                            color: textColor,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      const SizedBox(height: 4),
+                      if (userInfo != null)
+                        Text(
+                          userInfo['matricule'] ?? '',
+                          style: TextStyle(
+                            color: textColor.withOpacity(0.6),
+                            fontSize: 14,
+                          ),
+                        ),
+
+                      _buildSection('Informations personnelles'),
+
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: Column(
+                          children: [
+                            _buildTextField(
+                              'Nom complet',
+                              'Votre nom et prénom',
+                              nom,
+                              keyboardType: TextInputType.name,
+                            ),
+                            const SizedBox(height: 16),
+                            _buildTextField(
+                              'Matricule',
+                              'Votre numéro de matricule',
+                              matricule,
+                              enabled: false,
+                            ),
+                            const SizedBox(height: 16),
+                            _buildTextField(
+                              'Numéro de téléphone',
+                              'Votre numéro de téléphone',
+                              tel,
+                              keyboardType: TextInputType.phone,
+                            ),
+                            const SizedBox(height: 16),
+                            _buildTextField(
+                              'Adresse email',
+                              'Votre adresse email',
+                              email,
+                              keyboardType: TextInputType.emailAddress,
+                            ),
                           ],
-                          shape: BoxShape.circle,
-                          image: DecorationImage(
-                            image: userInfo != null ? NetworkImage('https://rh.madgi.ci/${userInfo['photo']}') : NetworkImage(''),
+                        ),
+                      ),
+
+                      const SizedBox(height: 32),
+
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: _isSaving ? null : _updateProfile,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: primaryColor,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: _isSaving
+                                ? SizedBox(
+                              height: 24,
+                              width: 24,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            )
+                                : Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.save, color: Colors.white, size: 20),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Enregistrer les modifications',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: Container(
-                          height: 40,
-                          width: 40,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              width: 4,
-                              color: Colors.amber
-                            ),
-                            color: Colors.white
-                          ),
-                          child: IconButton(
-                            onPressed: () async {
-                              final pickImage = await ImagePicker().pickImage(source: ImageSource.gallery);
-                              setState(() => image = pickImage);
-                              file();
-                            }, 
-                            icon: const Icon(Icons.edit, color: Colors.amber,)),
-                        ))
+
+                      const SizedBox(height: 40),
                     ],
                   ),
-                ),
-              ),
-            ),
-            // Champs de saisie
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildTextField('Nom et prenom', 'Cliquez pour saisir', nom, isPassword: false),
-                    const SizedBox(height: 20),
-                    _buildTextField('Matricule', 'Cliquez pour saisir', matricule, isPassword: false),
-                    const SizedBox(height: 20),
-                    _buildTextField('Numéro de téléphone', 'Cliquez pour saisir', tel, isPassword: false),
-                    const SizedBox(height: 20),
-                    _buildTextField('E-mail', 'Cliquez pour saisir', email, isPassword: false),
-                    // const SizedBox(height: 20),
-                    // _buildTextField('Mot de passe', 'Saisissez votre mot de passe', isPassword: true), 
-                    const SizedBox(height: 20),
-                    // Autres champs de saisie
-                    GestureDetector(
-                      onTap: () => submit(),
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 15),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF406ACC),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Center(
-                          child: Text(
-                            'Envoyer',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
                 ),
               ),
             ),
           ],
         ),
       ),
-      // bottomNavigationBar: Container(
-      //   width: double.infinity,
-      //   height: 95,
-      //   decoration: const BoxDecoration(
-      //     color: Colors.white,
-      //     boxShadow: [
-      //       BoxShadow(
-      //         color: Color(0x3F000000),
-      //         blurRadius: 25,
-      //         offset: Offset(0, -3),
-      //         spreadRadius: 0,
-      //       )
-      //     ],
-      //   ),
-      //   child: Padding(
-      //     padding: const EdgeInsets.only(left: 28, right: 28, top: 18),
-      //     child: Row(
-      //       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      //       children: [
-      //         Column(
-      //           mainAxisSize: MainAxisSize.min,
-      //           children: [
-      //             IconButton(
-      //               icon: const Icon(Icons.home, color: Colors.black),
-      //               onPressed: () {
-      //                 Navigator.pushNamed(context, '/home');
-      //               },
-      //             ),
-      //             const SizedBox(height: 9),
-      //             const Text(
-      //               'Accueil',
-      //               style: TextStyle(
-      //                 color: Colors.black,
-      //                 fontSize: 12,
-      //                 fontFamily: 'Inter',
-      //                 fontWeight: FontWeight.w400,
-      //                 height: 1.2,
-      //               ),
-      //             ),
-      //           ],
-      //         ),
-      //         Column(
-      //           mainAxisSize: MainAxisSize.min,
-      //           children: [
-      //             IconButton(
-      //               icon: const Icon(Icons.beach_access, color: Colors.black),
-      //               onPressed: () {
-      //                 Navigator.pushNamed(context, '/conger');
-      //               },
-      //             ),
-      //             const SizedBox(height: 9),
-      //             const Text(
-      //               'Congé',
-      //               style: TextStyle(
-      //                 color: Colors.black,
-      //                 fontSize: 12,
-      //                 fontFamily: 'Inter',
-      //                 fontWeight: FontWeight.w400,
-      //                 height: 1.2,
-      //               ),
-      //             ),
-      //           ],
-      //         ),
-      //         Column(
-      //           mainAxisSize: MainAxisSize.min,
-      //           children: [
-      //             IconButton(
-      //               icon: const Icon(Icons.history, color: Color(0xFF0F0F0F)),
-      //               onPressed: () {
-      //                 Navigator.pushNamed(context, '/infos');
-      //               },
-      //             ),
-      //             const SizedBox(height: 9),
-      //             const Text(
-      //               'Historique',
-      //               style: TextStyle(
-      //                 color: Color(0xFF0F0F0F),
-      //                 fontSize: 12,
-      //                 fontFamily: 'Inter',
-      //                 fontWeight: FontWeight.w400,
-      //                 height: 1.2,
-      //               ),
-      //             ),
-      //           ],
-      //         ),
-      //         Column(
-      //           mainAxisSize: MainAxisSize.min,
-      //           children: [
-      //             IconButton(
-      //               icon: const CircleAvatar(
-      //                 radius: 13,
-      //                 backgroundImage: AssetImage('assets/person.jpg'),
-      //               ),
-      //               onPressed: () {
-      //                 Navigator.pushNamed(context, '/profil');
-      //               },
-      //             ),
-      //             const SizedBox(height: 9),
-      //             const Text(
-      //               'Profil',
-      //               style: TextStyle(
-      //                 color: Color.fromRGBO(64, 106, 204, 1),
-      //                 fontSize: 12,
-      //                 fontFamily: 'Inter',
-      //                 fontWeight: FontWeight.w400,
-      //                 height: 1.2,
-      //               ),
-      //             ),
-      //           ],
-      //         ),
-      //       ],
-      //     ),
-      //   ),
-      // ),
     );
   }
 }

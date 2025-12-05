@@ -13,58 +13,76 @@ class Acceuil extends StatefulWidget {
   @override
   State<Acceuil> createState() => _AcceuilState();
 }
-class _AcceuilState extends State<Acceuil> {
 
-  final TextEditingController matricule = TextEditingController();
+class _AcceuilState extends State<Acceuil> {
+  // Couleurs officielles ivoiriennes
+  static const Color primaryColor = Color(0xFFF77F00);
+  static const Color secondaryColor = Color(0xFF009A44);
+  static const Color backgroundColor = Color(0xFFFFFFFF);
+  static const Color textColor = Color(0xFF2D3748);
+  static const Color lightGray = Color(0xFFF7FAFC);
+  static const Color mediumGray = Color(0xFFE2E8F0);
+
   late String _currentDate;
   late String _currentTime;
+  late String _currentDay;
   String _qrCodeData = "";
   late Timer _timer;
-  bool hasPreference = false;
   var userInfo;
-
-  Future getUserInfo() async {
-    final prefs = await SharedPreferences.getInstance();
-    var headers = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-      'Authorization': 'Bearer ${json.decode(prefs.getString('userInfo')!)['token']}'
-    };
-    var request = http.Request('GET', Uri.parse('https://rh.madgi.ci/api/v1/user-info'));
-    request.body = json.encode({'user_id': '${json.decode(prefs.getString('userInfo')!)['user']['id']}'});
-    request.headers.addAll(headers);
-    http.StreamedResponse response = await request.send();
-    final data = await response.stream.bytesToString();
-    final decode = json.decode(data);
-    if (decode['success']) setState(() {
-      userInfo = decode['data']['user'];
-      matricule.text = userInfo['matricule'];
-    });
-    _updateQRCodeData();
-  }
-
-  checkPreference() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      hasPreference = prefs.containsKey('save');
-      print(prefs.getString('save'));
-      if(hasPreference) matricule.text = prefs.getString('save')!;
-    });
-  }
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    getUserInfo();
-    // checkPreference();
-    _updateDateTime();
+    _initDateTime();
+    _getUserInfo();
     _startTimers();
   }
 
+  void _initDateTime() {
+    final now = DateTime.now();
+    setState(() {
+      _currentDate = DateFormat('dd MMMM yyyy', 'fr_FR').format(now);
+      _currentTime = DateFormat('HH:mm', 'fr_FR').format(now);
+      _currentDay = DateFormat('EEEE', 'fr_FR').format(now);
+    });
+  }
+
+  Future<void> _getUserInfo() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      var headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': 'Bearer ${json.decode(prefs.getString('userInfo')!)['token']}'
+      };
+      var request = http.Request('GET', Uri.parse('https://rh.madgi.ci/api/v1/user-info'));
+      request.body = json.encode({'user_id': '${json.decode(prefs.getString('userInfo')!)['user']['id']}'});
+      request.headers.addAll(headers);
+      http.StreamedResponse response = await request.send();
+      final data = await response.stream.bytesToString();
+      final decode = json.decode(data);
+
+      if (decode['success']) {
+        setState(() {
+          userInfo = decode['data']['user'];
+        });
+        await _updateQRCodeData();
+      }
+    } catch (e) {
+      print('❌ Erreur chargement infos: $e');
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
   void _startTimers() {
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+    // Mettre à jour l'heure chaque minute
+    _timer = Timer.periodic(const Duration(minutes: 1), (timer) {
       _updateDateTime();
     });
+
+    // Mettre à jour le QR code toutes les 30 secondes
     Timer.periodic(const Duration(seconds: 30), (timer) {
       _updateQRCodeData();
     });
@@ -72,26 +90,31 @@ class _AcceuilState extends State<Acceuil> {
 
   void _updateDateTime() {
     final now = DateTime.now();
-    final dateFormatter = DateFormat('yyyy-MM-dd');
-    final timeFormatter = DateFormat('HH:mm:ss');
     setState(() {
-      _currentDate = dateFormatter.format(now);
-      _currentTime = timeFormatter.format(now);
+      _currentTime = DateFormat('HH:mm', 'fr_FR').format(now);
     });
   }
 
-  void _updateQRCodeData() async {
-    final deviceInfoPlugin = DeviceInfoPlugin();
-    final deviceInfo = await deviceInfoPlugin.androidInfo;
-    final allInfo = "${deviceInfo.id}.${deviceInfo.device}.${deviceInfo.serialNumber}.${deviceInfo.product}";
-    setState(() {
-      _qrCodeData = json.encode({
-        "Date": "$_currentDate", 
-        "Time": "$_currentTime",
-        "matricule": matricule.text,
-        "type_device": '$allInfo',
+  Future<void> _updateQRCodeData() async {
+    if (userInfo == null) return;
+
+    try {
+      final deviceInfoPlugin = DeviceInfoPlugin();
+      final deviceInfo = await deviceInfoPlugin.androidInfo;
+
+      setState(() {
+        _qrCodeData = json.encode({
+          "matricule": userInfo['matricule'] ?? '',
+          "nom": userInfo['nom'] ?? '',
+          "date": _currentDate,
+          "heure": _currentTime,
+          "device_id": deviceInfo.id,
+          "timestamp": DateTime.now().toIso8601String(),
+        });
       });
-    });
+    } catch (e) {
+      print('❌ Erreur génération QR code: $e');
+    }
   }
 
   @override
@@ -100,185 +123,462 @@ class _AcceuilState extends State<Acceuil> {
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) => Scaffold(
-        body: Column(
-          children: <Widget>[
-            ClipPath(
-              clipper: MyClipper(),
-              child: Container(
-                width: double.infinity,
-                height: 110,
-                decoration: const BoxDecoration(
-                  color: Color.fromARGB(255, 251, 141, 6),
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(24),
+          bottomRight: Radius.circular(24),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Date et heure
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+            decoration: BoxDecoration(
+              color: primaryColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.calendar_today,
+                  color: primaryColor,
+                  size: 20,
                 ),
-                child: Center(
-                  child: Column(
-                    children: [
-                      const SizedBox(
-                        height: 5,
+                const SizedBox(width: 8),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _currentDay,
+                      style: TextStyle(
+                        color: textColor,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
                       ),
-                      Text(
-                        _currentDate ?? '',
-                        style: const TextStyle(color: Colors.white, fontSize: 18),
+                    ),
+                    Text(
+                      '$_currentDate • $_currentTime',
+                      style: TextStyle(
+                        color: textColor.withOpacity(0.7),
+                        fontSize: 12,
                       ),
-                      const SizedBox(
-                        height: 7,
-                      ),
-                      Text(
-                        _currentTime ?? '',
-                        style: const TextStyle(color: Colors.white, fontSize: 20),
-                      )
-                    ],
+                    ),
+                  ],
+                ),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: primaryColor,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    'EN LIGNE',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
-              ),
+              ],
             ),
-            Expanded(
-              child: SingleChildScrollView(
+          ),
+
+          const SizedBox(height: 20),
+
+          // Informations utilisateur
+          Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: primaryColor.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: primaryColor.withOpacity(0.3), width: 2),
+                ),
+                child: userInfo != null && userInfo['photo'] != null
+                    ? CircleAvatar(
+                  backgroundImage: NetworkImage('https://rh.madgi.ci/${userInfo['photo']}'),
+                )
+                    : Icon(
+                  Icons.person,
+                  color: primaryColor,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
                 child: Column(
-                  children: <Widget>[
-                    // if(!hasPreference) ...[
-                    //   Padding(
-                    //     padding: const EdgeInsets.all(15.0),
-                    //     child: Column(
-                    //       crossAxisAlignment: CrossAxisAlignment.start,
-                    //       children: [
-                    //         Text(
-                    //           'Matricule',
-                    //           style: const TextStyle(
-                    //             color: Color(0xFF0F0F0F),
-                    //             fontSize: 16,
-                    //           ),
-                    //         ),
-                    //         const SizedBox(height: 10),
-                    //         TextField(
-                    //           controller: matricule,
-                    //           decoration: InputDecoration(
-                    //             hintStyle: const TextStyle(color: Color(0xFF3F3F3F)),
-                    //             filled: true,
-                    //             border: OutlineInputBorder(
-                    //               borderRadius: BorderRadius.circular(8),
-                    //               borderSide: BorderSide.none,
-                    //             ),
-                    //           ),
-                    //           onChanged: (value) => _updateQRCodeData(),
-                    //           style: const TextStyle(color: Colors.black), // Set text color to black
-                    //         ),
-                    //       ],
-                    //     ),
-                    //   ),
-                    //   if(matricule.text.isNotEmpty) ...[
-                    //     Align(
-                    //       alignment: Alignment.centerRight,
-                    //       child: TextButton(
-                    //         onPressed: () {
-                    //           showDialog(
-                    //             context: context,
-                    //             builder: (ctx) => AlertDialog(
-                    //               title: Row(
-                    //                 children: [
-                    //                   Image.asset(
-                    //                     'assets/attention.png', // L'image attention de votre dossier assets
-                    //                     width: 24,
-                    //                     height: 24,
-                    //                   ),
-                    //                   const SizedBox(width: 10),
-                    //                   const Text('Information'),
-                    //                 ],
-                    //               ),
-                    //               content: Text("Sauvegarder ce matricule pour les prochaines connexion"),
-                    //               actions: <Widget>[
-                    //                 TextButton(
-                    //                   child: const Text('Annuler'),
-                    //                   onPressed: () {
-                    //                     Navigator.of(ctx).pop();
-                    //                   },
-                    //                 ),
-                    //                 TextButton(
-                    //                   child: const Text('Enregistrer'),
-                    //                   onPressed: () async {
-                    //                     final prefs = await SharedPreferences.getInstance();
-                    //                     await prefs.setString('save', matricule.text);
-                    //                     Navigator.of(ctx).pop();
-                    //                     showDialog(
-                    //                       context: context,
-                    //                       builder: (ctx) => AlertDialog(
-                    //                         title: Row(
-                    //                           children: [
-                    //                             Image.asset(
-                    //                               'assets/attention.png', // L'image attention de votre dossier assets
-                    //                               width: 24,
-                    //                               height: 24,
-                    //                             ),
-                    //                             const SizedBox(width: 10),
-                    //                             const Text('Information'),
-                    //                           ],
-                    //                         ),
-                    //                         content: Text("Matricule sauvegarder"),
-                    //                         actions: <Widget>[
-                    //                           TextButton(
-                    //                             child: const Text('Retour'),
-                    //                             onPressed: () {
-                    //                               checkPreference();
-                    //                               Navigator.of(ctx).pop();
-                    //                             },
-                    //                           ),
-                    //                         ],
-                    //                       ),
-                    //                     );
-                    //                   },
-                    //                 )
-                    //               ],
-                    //             ),
-                    //           );
-                    //         }, 
-                    //         child: Text(
-                    //           'Sauvegarder ce matricule ?',
-                    //         )
-                    //       ),
-                    //     ),
-                    //     const SizedBox(height: 15),
-                    //   ]
-                    // ],
-                    if(matricule.text.isNotEmpty/* || hasPreference*/) ...[
-                      const Text(
-                        "SCANNEZ MOI!",
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                        ),
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Bonjour,',
+                      style: TextStyle(
+                        color: textColor.withOpacity(0.7),
+                        fontSize: 14,
                       ),
+                    ),
+                    Text(
+                      userInfo != null ? userInfo['nom'] ?? 'Chargement...' : 'Chargement...',
+                      style: TextStyle(
+                        color: textColor,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQRCodeSection() {
+    return Container(
+      margin: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Titre
+          Text(
+            'Votre code d\'émargement',
+            style: TextStyle(
+              color: textColor,
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+            ),
+            textAlign: TextAlign.center,
+          ),
+
+          const SizedBox(height: 8),
+
+          // Description
+          Text(
+            'Présentez ce code QR pour pointer',
+            style: TextStyle(
+              color: textColor.withOpacity(0.6),
+              fontSize: 14,
+            ),
+            textAlign: TextAlign.center,
+          ),
+
+          const SizedBox(height: 24),
+
+          // QR Code
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: lightGray,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: mediumGray, width: 1),
+            ),
+            child: Column(
+              children: [
+                if (_isLoading)
+                  Container(
+                    width: 200,
+                    height: 200,
+                    alignment: Alignment.center,
+                    child: CircularProgressIndicator(color: primaryColor),
+                  )
+                else if (_qrCodeData.isNotEmpty && userInfo != null)
+                  Column(
+                    children: [
                       QrImageView(
                         data: _qrCodeData,
                         version: QrVersions.auto,
-                        gapless: false,
-                        size: 320,
+                        size: 200,
+                        backgroundColor: Colors.white,
+                        eyeStyle: QrEyeStyle(
+                          eyeShape: QrEyeShape.square,
+                          color: primaryColor,
+                        ),
+                        dataModuleStyle: QrDataModuleStyle(
+                          dataModuleShape: QrDataModuleShape.square,
+                          color: textColor,
+                        ),
                       ),
-                    ]
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: primaryColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.autorenew,
+                              color: primaryColor,
+                              size: 14,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Actualisé toutes les 30 secondes',
+                              style: TextStyle(
+                                color: primaryColor,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  )
+                else
+                  Container(
+                    width: 200,
+                    height: 200,
+                    alignment: Alignment.center,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.qr_code_scanner,
+                          color: mediumGray,
+                          size: 48,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Génération du code...',
+                          style: TextStyle(
+                            color: textColor.withOpacity(0.6),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          // Informations de session
+          if (userInfo != null && !_isLoading)
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: lightGray,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: mediumGray, width: 1),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.badge,
+                    color: primaryColor,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Matricule',
+                          style: TextStyle(
+                            color: textColor.withOpacity(0.6),
+                            fontSize: 12,
+                          ),
+                        ),
+                        Text(
+                          userInfo['matricule'] ?? 'Non disponible',
+                          style: TextStyle(
+                            color: textColor,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    Icons.verified,
+                    color: secondaryColor,
+                    size: 20,
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInstructions() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Instructions',
+            style: TextStyle(
+              color: textColor,
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: backgroundColor,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: mediumGray, width: 1),
+            ),
+            child: Column(
+              children: [
+                _buildInstructionStep(
+                  number: 1,
+                  icon: Icons.qr_code_scanner,
+                  title: 'Présentez le code QR',
+                  description: 'Montrez ce code à la tablette de pointage',
+                ),
+                const SizedBox(height: 16),
+                _buildInstructionStep(
+                  number: 2,
+                  icon: Icons.verified,
+                  title: 'Validation automatique',
+                  description: 'La détection est instantanée',
+                ),
+                const SizedBox(height: 16),
+                _buildInstructionStep(
+                  number: 3,
+                  icon: Icons.notifications,
+                  title: 'Confirmation',
+                  description: 'Recevez une notification de confirmation',
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInstructionStep({
+    required int number,
+    required IconData icon,
+    required String title,
+    required String description,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: primaryColor,
+            shape: BoxShape.circle,
+          ),
+          child: Center(
+            child: Text(
+              '$number',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    icon,
+                    color: primaryColor,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                description,
+                style: TextStyle(
+                  color: textColor.withOpacity(0.6),
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: lightGray,
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildHeader(),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    _buildQRCodeSection(),
+                    const SizedBox(height: 24),
+                    _buildInstructions(),
+                    const SizedBox(height: 40),
                   ],
                 ),
               ),
             ),
           ],
         ),
-      );
-}
-
-class MyClipper extends CustomClipper<Path> {
-  @override
-  Path getClip(Size size) {
-    var path = Path();
-    path.lineTo(0, size.height - 80);
-    path.quadraticBezierTo(size.width / 2, size.height, size.width, size.height - 80);
-    path.lineTo(size.width, 0);
-    path.close();
-    return path;
-  }
-
-  @override
-  bool shouldReclip(covariant CustomClipper<Path> oldClipper) {
-    return false;
+      ),
+    );
   }
 }

@@ -15,6 +15,15 @@ class Formulaire extends StatefulWidget {
 }
 
 class _FormulaireState extends State<Formulaire> {
+  // Couleurs officielles
+  static const Color primaryColor = Color(0xFFF77F00);
+  static const Color secondaryColor = Color(0xFF009A44);
+  static const Color backgroundColor = Color(0xFFFFFFFF);
+  static const Color textColor = Color(0xFF2D3748);
+  static const Color lightGray = Color(0xFFF7FAFC);
+  static const Color mediumGray = Color(0xFFE2E8F0);
+  static const Color errorColor = Color(0xFFE53E3E);
+
   TextEditingController nomprenomTextEditingController = TextEditingController();
   TextEditingController matriculeTextEditingController = TextEditingController();
   TextEditingController departementTextEditingController = TextEditingController();
@@ -26,7 +35,9 @@ class _FormulaireState extends State<Formulaire> {
   TextEditingController interim = TextEditingController();
   TextEditingController contactTextEditingController = TextEditingController();
   TextEditingController motdepasseTextEditingController = TextEditingController();
+
   bool _obscureText = true;
+  bool _isLoading = false;
   var userInfo;
   int _departement = 0;
   int _service = 0;
@@ -40,7 +51,7 @@ class _FormulaireState extends State<Formulaire> {
       'Accept': 'application/json',
       'Authorization': 'Bearer ${json.decode(prefs.getString('userInfo')!)['token']}'
     };
-    var request = http.Request('GET', Uri.parse('https://rh.madgi.ci/api/v1/user-info'));
+    var request = http.Request('GET', Uri.parse('http://192.168.1.12:8000/api/v1/user-info'));
     request.body = json.encode({'user_id': '${json.decode(prefs.getString('userInfo')!)['user']['id']}'});
     request.headers.addAll(headers);
     http.StreamedResponse response = await request.send();
@@ -60,7 +71,7 @@ class _FormulaireState extends State<Formulaire> {
       'Accept': 'application/json',
       'Authorization': 'Bearer ${json.decode(prefs.getString('userInfo')!)['token']}'
     };
-    var request = http.Request('GET', Uri.parse('https://rh.madgi.ci/api/v1/departments'));
+    var request = http.Request('GET', Uri.parse('http://192.168.1.12:8000/api/v1/departments'));
     request.body = json.encode({'user_id': '${json.decode(prefs.getString('userInfo')!)['user']['id']}'});
     request.headers.addAll(headers);
     http.StreamedResponse response = await request.send();
@@ -76,7 +87,7 @@ class _FormulaireState extends State<Formulaire> {
       'Accept': 'application/json',
       'Authorization': 'Bearer ${json.decode(prefs.getString('userInfo')!)['token']}'
     };
-    var request = http.Request('GET', Uri.parse('https://rh.madgi.ci/api/v1/services'));
+    var request = http.Request('GET', Uri.parse('http://192.168.1.12:8000/api/v1/services'));
     request.body = json.encode({'user_id': '${json.decode(prefs.getString('userInfo')!)['user']['id']}'});
     request.headers.addAll(headers);
     http.StreamedResponse response = await request.send();
@@ -93,63 +104,381 @@ class _FormulaireState extends State<Formulaire> {
     getUserInfo();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_outlined),
-          onPressed: () {
-            Navigator.pop(context);
-          },
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(24),
+          bottomRight: Radius.circular(24),
         ),
-        title: const Text('Formulaire de demande'),
-        centerTitle: true,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              _buildTextField('Nom et prénom', 'Cliquez pour saisir', nomprenomTextEditingController),
-              const SizedBox(height: 15),
-              _buildTextField('Matricule', 'Cliquez pour saisir', matriculeTextEditingController),
-              const SizedBox(height: 15),
-              _buildDropdownField('Département', departementTextEditingController, _departements),
-              const SizedBox(height: 15),
-              _buildDropdownField('Service', serviceTextEditingController, _services),
-              const SizedBox(height: 15),
-              _buildDateField('Date de début', 'Cliquez pour saisir', datedebutTextEditingController),
-              const SizedBox(height: 15),
-              _buildDateField('Date de fin', 'Cliquez pour saisir', datefinTextEditingController),
-              const SizedBox(height: 15),
-              _buildTextField('Lieu de jouissance', 'Cliquez pour saisir', lieuTextEditingController),
-              const SizedBox(height: 15),
-              _buildTextField('Personne à contacter', 'Cliquez pour saisir', callUser),
-              const SizedBox(height: 15),
-              _buildTextField('Téléphone à contacter', 'Cliquez pour saisir', contactTextEditingController),
-              const SizedBox(height: 15),
-              _buildTextField('Intérime', 'Cliquez pour saisir', interim),
-              // _buildTextField('Mot de passe', 'Saisissez votre mot de passe', motdepasseTextEditingController, isPassword: true),
-              const SizedBox(height: 40),
-              GestureDetector(
-                onTap: _valider,
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 15),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF406ACC),
-                    borderRadius: BorderRadius.circular(8),
+              IconButton(
+                icon: Icon(Icons.arrow_back, color: primaryColor),
+                onPressed: () => Navigator.pop(context),
+              ),
+              Expanded(
+                child: Text(
+                  'Formulaire de demande',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
                   ),
-                  child: const Center(
-                    child: Text(
-                      'Envoyer ma demande',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(width: 48), // Pour centrer le titre
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Remplissez tous les champs pour soumettre votre demande',
+            style: TextStyle(
+              color: textColor.withOpacity(0.6),
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextField(String label, String hint, TextEditingController controller, {bool isPassword = false, bool enabled = true}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: textColor,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width - 48, // 24 padding de chaque côté
+          ),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.03),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: TextField(
+            controller: controller,
+            enabled: enabled,
+            obscureText: isPassword && _obscureText,
+            keyboardType: label.contains('Téléphone') ? TextInputType.phone : TextInputType.text,
+            style: TextStyle(color: textColor),
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: enabled ? Colors.white : lightGray,
+              hintText: hint,
+              hintStyle: TextStyle(color: mediumGray),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: mediumGray, width: 1),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: mediumGray, width: 1),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: primaryColor, width: 2),
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              suffixIcon: isPassword
+                  ? IconButton(
+                icon: Icon(
+                  _obscureText ? Icons.visibility_off : Icons.visibility,
+                  color: mediumGray,
+                ),
+                onPressed: _togglePasswordVisibility,
+              )
+                  : null,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDropdownField(String label, TextEditingController controller, List items) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: textColor,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width - 48, // 24 padding de chaque côté
+          ),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.03),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: DropdownButtonFormField<String>(
+            isExpanded: true,
+            items: items.map<DropdownMenuItem<String>>((value) {
+              return DropdownMenuItem<String>(
+                value: value['name'],
+                child: Container(
+                  constraints: BoxConstraints(
+                    maxWidth: MediaQuery.of(context).size.width - 100, // Contrainte pour le texte
+                  ),
+                  child: Text(
+                    value['name'],
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 14,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
+                ),
+              );
+            }).toList(),
+            onChanged: (newValue) {
+              if (newValue != null) {
+                controller.text = newValue;
+                final result = items.firstWhere(
+                      (element) => element['name'] == newValue,
+                  orElse: () => {'id': -1},
+                );
+                if (result['id'] != -1) {
+                  if (label == 'Département') {
+                    setState(() => _departement = result['id']);
+                  } else {
+                    setState(() => _service = result['id']);
+                  }
+                }
+              }
+            },
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: mediumGray, width: 1),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: mediumGray, width: 1),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: primaryColor, width: 2),
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              hintText: 'Sélectionnez un $label',
+              hintStyle: TextStyle(
+                color: mediumGray,
+                fontSize: 14,
+              ),
+            ),
+            style: TextStyle(
+              color: textColor,
+              fontSize: 14,
+            ),
+            icon: Icon(Icons.arrow_drop_down, color: primaryColor),
+            dropdownColor: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDateField(String label, String hint, TextEditingController controller) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: textColor,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width - 48,
+          ),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.03),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: TextField(
+            controller: controller,
+            readOnly: true,
+            onTap: () async {
+              final DateTime? pickedDate = await showDatePicker(
+                context: context,
+                initialDate: DateTime.now(),
+                firstDate: DateTime(2000),
+                lastDate: DateTime(2101),
+                builder: (context, child) {
+                  return Theme(
+                    data: ThemeData.light().copyWith(
+                      colorScheme: ColorScheme.light(
+                        primary: primaryColor,
+                        onPrimary: Colors.white,
                       ),
+                      dialogBackgroundColor: Colors.white,
+                    ),
+                    child: child!,
+                  );
+                },
+              );
+              if (pickedDate != null) {
+                setState(() {
+                  controller.text = "${pickedDate.day}/${pickedDate.month}/${pickedDate.year}";
+                });
+              }
+            },
+            style: TextStyle(color: textColor),
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: Colors.white,
+              hintText: hint,
+              hintStyle: TextStyle(color: mediumGray),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: mediumGray, width: 1),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: mediumGray, width: 1),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: primaryColor, width: 2),
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              suffixIcon: Icon(Icons.calendar_today, color: primaryColor),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _togglePasswordVisibility() {
+    setState(() {
+      _obscureText = !_obscureText;
+    });
+  }
+
+  void _showSuccessDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: secondaryColor.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.check_circle,
+                  color: secondaryColor,
+                  size: 32,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Demande envoyée !',
+                style: TextStyle(
+                  color: textColor,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Votre demande a été soumise avec succès.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: textColor.withOpacity(0.6),
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    Navigator.pushNamed(context, '/valider');
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: secondaryColor,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'Continuer',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
@@ -160,135 +489,85 @@ class _FormulaireState extends State<Formulaire> {
       ),
     );
   }
-  Widget _buildTextField(String label, String hint, TextEditingController controller, {bool isPassword = false}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: Color(0xFF0F0F0F),
-            fontSize: 16,
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: errorColor.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.error_outline,
+                  color: errorColor,
+                  size: 32,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Erreur',
+                style: TextStyle(
+                  color: textColor,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: textColor.withOpacity(0.6),
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryColor,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'OK',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
-        const SizedBox(height: 10),
-        TextField(
-          controller: controller,
-          obscureText: isPassword && _obscureText,
-          keyboardType: label == 'Téléphone à contacter' ? TextInputType.phone : TextInputType.text,
-          decoration: InputDecoration(
-            enabled: label == 'Nom et prénom' || label == 'Matricule' ? false : true,
-            hintText: hint,
-            hintStyle: const TextStyle(color: Color(0xFF3F3F3F)),
-            filled: true,
-            fillColor: const Color(0xFFFAF7F7),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide.none,
-            ),
-            suffixIcon: isPassword
-                ? IconButton(
-                    icon: Icon(_obscureText ? Icons.visibility_off : Icons.visibility),
-                    onPressed: _togglePasswordVisibility,
-                  )
-                : null,
-          ),
-          style: const TextStyle(color: Colors.black),
-        ),
-      ],
+      ),
     );
-  }
-  Widget _buildDropdownField(String label, TextEditingController controller, List items) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: Color(0xFF0F0F0F),
-            fontSize: 16,
-          ),
-        ),
-        const SizedBox(height: 10),
-        DropdownButtonFormField<String>(
-          items: items.map((value) {
-            return DropdownMenuItem<String>(
-              value: value['name'],
-              child: Text(value['name']),
-            );
-          }).toList(),
-          onChanged: (newValue) {
-            controller.text = newValue!;
-            final result = items.firstWhere((element) => element['name'] == newValue, orElse: () => -1);
-            if(result != -1) {
-              if(label == 'Département') setState(() => _departement = result['id']);
-              else setState(() => _service = result['id']);
-            }
-          },
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: const Color(0xFFFAF7F7),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide.none,
-            ),
-          ),
-          style: const TextStyle(color: Colors.black),
-        ),
-      ],
-    );
-  }
-  Widget _buildDateField(String label, String hint, TextEditingController controller) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: Color(0xFF0F0F0F),
-            fontSize: 16,
-          ),
-        ),
-        const SizedBox(height: 10),
-        TextField(
-          controller: controller,
-          readOnly: true,
-          onTap: () async {
-            DateTime? pickedDate = await showDatePicker(
-              context: context,
-              initialDate: DateTime.now(),
-              firstDate: DateTime(2000),
-              lastDate: DateTime(2101),
-            );
-            if (pickedDate != null) {
-              setState(() {
-                controller.text = "${pickedDate.day}/${pickedDate.month}/${pickedDate.year}";
-              });
-            }
-          },
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: const TextStyle(color: Color(0xFF3F3F3F)),
-            filled: true,
-            fillColor: const Color(0xFFFAF7F7),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide.none,
-            ),
-            suffixIcon: const Icon(Icons.calendar_today, color: Colors.black),
-          ),
-          style: const TextStyle(color: Colors.black),
-        ),
-      ],
-    );
-  }
-  void _togglePasswordVisibility() {
-    setState(() {
-      _obscureText = !_obscureText;
-    });
   }
 
   Future _valider() async {
+    if (_isLoading) return;
+
     final nomprenom = nomprenomTextEditingController.text;
     final matricule = matriculeTextEditingController.text;
     final departement = departementTextEditingController.text;
@@ -297,18 +576,29 @@ class _FormulaireState extends State<Formulaire> {
     final datefin = datefinTextEditingController.text;
     final lieu = lieuTextEditingController.text;
     final contact = contactTextEditingController.text;
-    final password = motdepasseTextEditingController.text;
 
-    if (nomprenom.isEmpty || matricule.isEmpty || departement.isEmpty || service.isEmpty || datedebut.isEmpty || datefin.isEmpty/* || lieu.isEmpty || callUser.text.isEmpty || interim.text.isEmpty || contact.isEmpty*/) {
-      _showErrorDialog('Veuillez saisir tous les champs, s\'il vous plaît.');
-    } else {
+    // Validation des champs requis
+    if (nomprenom.isEmpty ||
+        matricule.isEmpty ||
+        departement.isEmpty ||
+        service.isEmpty ||
+        datedebut.isEmpty ||
+        datefin.isEmpty) {
+      _showErrorDialog('Veuillez remplir tous les champs obligatoires.');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
       final prefs = await SharedPreferences.getInstance();
       var headers = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         'Authorization': 'Bearer ${json.decode(prefs.getString('userInfo')!)['token']}'
       };
-      var request = http.Request('POST', Uri.parse('https://rh.madgi.ci/api/v1/leaves'));
+
+      var request = http.Request('POST', Uri.parse('http://192.168.1.12:8000/api/v1/leaves'));
       request.body = json.encode({
         "fullname": nomprenom,
         "matricule": matricule,
@@ -323,37 +613,225 @@ class _FormulaireState extends State<Formulaire> {
         "type_id": '${widget.typeId}',
         'user_id': '${json.decode(prefs.getString('userInfo')!)['user']['id']}'
       });
+
       request.headers.addAll(headers);
       http.StreamedResponse response = await request.send();
       final data = await response.stream.bytesToString();
       final decode = json.decode(data);
-      if (decode['success']) return Navigator.pushNamed(context, '/valider');
-      else _showErrorDialog(decode['message']);
+
+      setState(() => _isLoading = false);
+
+      if (decode['success']) {
+        _showSuccessDialog();
+      } else {
+        _showErrorDialog(decode['message'] ?? 'Une erreur est survenue');
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      _showErrorDialog('Erreur de connexion. Veuillez réessayer.');
     }
   }
-  void _showErrorDialog(String message) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Erreur'),
-          content: Text(message),
-          actions: [
-            TextButton(
-              child: Text('OK'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: lightGray,
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildHeader(),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Section informations personnelles
+                    Container(
+                      constraints: BoxConstraints(
+                        maxWidth: MediaQuery.of(context).size.width - 48,
+                      ),
+                      child: Text(
+                        'Informations personnelles',
+                        style: TextStyle(
+                          color: textColor,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    Container(
+                      constraints: BoxConstraints(
+                        maxWidth: MediaQuery.of(context).size.width - 48,
+                      ),
+                      child: _buildTextField('Nom et prénom', 'Saisissez votre nom complet',
+                          nomprenomTextEditingController, enabled: false),
+                    ),
+                    const SizedBox(height: 16),
+
+                    Container(
+                      constraints: BoxConstraints(
+                        maxWidth: MediaQuery.of(context).size.width - 48,
+                      ),
+                      child: _buildTextField('Matricule', 'Votre matricule',
+                          matriculeTextEditingController, enabled: false),
+                    ),
+                    const SizedBox(height: 16),
+
+                    Container(
+                      constraints: BoxConstraints(
+                        maxWidth: MediaQuery.of(context).size.width - 48,
+                      ),
+                      child: _buildDropdownField('Département', departementTextEditingController, _departements),
+                    ),
+                    const SizedBox(height: 16),
+
+                    Container(
+                      constraints: BoxConstraints(
+                        maxWidth: MediaQuery.of(context).size.width - 48,
+                      ),
+                      child: _buildDropdownField('Service', serviceTextEditingController, _services),
+                    ),
+
+                    const SizedBox(height: 24),
+                    Container(
+                      constraints: BoxConstraints(
+                        maxWidth: MediaQuery.of(context).size.width - 48,
+                      ),
+                      child: Divider(color: mediumGray, height: 1),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Section congé
+                    Container(
+                      constraints: BoxConstraints(
+                        maxWidth: MediaQuery.of(context).size.width - 48,
+                      ),
+                      child: Text(
+                        'Détails du congé',
+                        style: TextStyle(
+                          color: textColor,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    Container(
+                      constraints: BoxConstraints(
+                        maxWidth: MediaQuery.of(context).size.width - 48,
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              constraints: BoxConstraints(
+                                maxWidth: (MediaQuery.of(context).size.width - 88) / 2, // 48 + 16 + 24 padding
+                              ),
+                              child: _buildDateField('Date de début', 'JJ/MM/AAAA', datedebutTextEditingController),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Container(
+                              constraints: BoxConstraints(
+                                maxWidth: (MediaQuery.of(context).size.width - 88) / 2,
+                              ),
+                              child: _buildDateField('Date de fin', 'JJ/MM/AAAA', datefinTextEditingController),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    Container(
+                      constraints: BoxConstraints(
+                        maxWidth: MediaQuery.of(context).size.width - 48,
+                      ),
+                      child: _buildTextField('Lieu de jouissance', 'Saisissez le lieu', lieuTextEditingController),
+                    ),
+                    const SizedBox(height: 16),
+
+                    Container(
+                      constraints: BoxConstraints(
+                        maxWidth: MediaQuery.of(context).size.width - 48,
+                      ),
+                      child: _buildTextField('Personne à contacter', 'Nom de la personne', callUser),
+                    ),
+                    const SizedBox(height: 16),
+
+                    Container(
+                      constraints: BoxConstraints(
+                        maxWidth: MediaQuery.of(context).size.width - 48,
+                      ),
+                      child: _buildTextField('Téléphone à contacter', 'Numéro de téléphone', contactTextEditingController),
+                    ),
+                    const SizedBox(height: 16),
+
+                    Container(
+                      constraints: BoxConstraints(
+                        maxWidth: MediaQuery.of(context).size.width - 48,
+                      ),
+                      child: _buildTextField('Intérim', 'Nom de l\'intérimaire', interim),
+                    ),
+                    const SizedBox(height: 32),
+
+                    // Bouton de soumission
+                    Container(
+                      constraints: BoxConstraints(
+                        maxWidth: MediaQuery.of(context).size.width - 48,
+                      ),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _isLoading ? null : _valider,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: primaryColor,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: _isLoading
+                              ? SizedBox(
+                            height: 24,
+                            width: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                              : Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.send, color: Colors.white, size: 20),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Envoyer ma demande',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+                ),
+              ),
             ),
           ],
-        );
-      },
+        ),
+      ),
     );
   }
 }
-
-
-
-
-
-

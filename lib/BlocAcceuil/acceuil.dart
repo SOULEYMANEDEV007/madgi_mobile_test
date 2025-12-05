@@ -28,6 +28,15 @@ class _AccueilState extends State<Accueil> {
   List infos = [];
   int quit = 0;
 
+  // Couleurs officielles ivoiriennes
+  static const Color primaryColor = Color(0xFFF77F00); // Orange principal
+  static const Color secondaryColor = Color(0xFF009A44); // Vert ivoirien
+  static const Color backgroundColor = Color(0xFFFFFFFF); // Blanc
+  static const Color textColor = Color(0xFF2D3748); // Gris foncé pour texte
+  static const Color lightGray = Color(0xFFF7FAFC); // Gris très clair
+  static const Color mediumGray = Color(0xFFE2E8F0);
+  static const Color accentColor = Color(0xFF2B6CB0); // Bleu pour accents
+
   Future getUserInfo() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -48,7 +57,7 @@ class _AccueilState extends State<Accueil> {
         'Authorization': 'Bearer $token'
       };
 
-      var request = http.Request('GET', Uri.parse('https://rh.madgi.ci/api/v1/user-info'));
+      var request = http.Request('GET', Uri.parse('http://rh.madgi.ci/api/v1/user-info'));
       request.body = json.encode({'user_id': userId});
       request.headers.addAll(headers);
 
@@ -60,7 +69,7 @@ class _AccueilState extends State<Accueil> {
         setState(() {
           userInfo = decode['data']['user'];
         });
-        getInfo(); // Appeler getInfo APRÈS avoir récupéré userInfo
+        getInfo();
       } else {
         print('❌ Erreur API user-info: ${decode['message']}');
       }
@@ -89,7 +98,7 @@ class _AccueilState extends State<Accueil> {
         'Authorization': 'Bearer $token'
       };
 
-      var request = http.Request('GET', Uri.parse('https://rh.madgi.ci/api/v1/infos'));
+      var request = http.Request('GET', Uri.parse('http://192.168.1.12:8000/api/v1/infos'));
       request.body = json.encode({'user_id': userId});
       request.headers.addAll(headers);
 
@@ -153,54 +162,167 @@ class _AccueilState extends State<Accueil> {
     getUserInfo();
   }
 
+  Widget _buildServiceCard({
+    required IconData icon,
+    required String title,
+    required Color color,
+    required VoidCallback onTap,
+    double iconSize = 30,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: color.withOpacity(0.2),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon,
+                color: Colors.white,
+                size: iconSize,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSlideIndicator() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(3, (index) {
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          width: _currentPage == index ? 24 : 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: _currentPage == index ? primaryColor : mediumGray,
+            borderRadius: BorderRadius.circular(4),
+          ),
+        );
+      }),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: lightGray,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        shadowColor: Colors.amber,
-        title: Center(
-          child: Image.asset(
-            'assets/images.jpg',
-            height: 40,
+        backgroundColor: backgroundColor,
+        elevation: 0,
+        centerTitle: true,
+        title: Image.asset(
+          'assets/images.jpg',
+          height: 40,
+          fit: BoxFit.contain,
+        ),
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: Icon(
+              Icons.menu,
+              color: primaryColor,
+              size: 28,
+            ),
+            onPressed: () => Scaffold.of(context).openDrawer(),
           ),
         ),
         actions: [
-          InkWell(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const Notifications(),
+          Stack(
+            children: [
+              IconButton(
+                icon: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: mediumGray,
+                  ),
+                  child: Icon(
+                    Icons.notifications_outlined,
+                    color: textColor,
+                    size: 24,
+                  ),
                 ),
-              );
-            },
-            child: badges.Badge(
-              position: badges.BadgePosition.topEnd(top: -10, end: -12),
-              badgeContent: Text(
-                userInfo != null
-                    ? '${infos.length - infos.where((element) => element['info']['userinfos']?['user_id'] == userInfo['id']).toList().length}'
-                    : '0',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const Notifications(),
+                    ),
+                  );
+                },
+              ),
+              if (userInfo != null)
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Color(0xFFE53E3E),
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 18,
+                      minHeight: 18,
+                    ),
+                    child: Text(
+                      '${infos.length - infos.where((element) => element['info']['userinfos']?['user_id'] == userInfo['id']).toList().length}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
                 ),
-              ),
-              child: const Icon(
-                  Icons.notifications,
-                  size: 30,
-                  color: Color.fromARGB(255, 174, 172, 172)
-              ),
-            ),
+            ],
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 8),
         ],
       ),
       drawer: Drawer(
         child: Theme(
-          data: ThemeData.dark(),
+          data: ThemeData.light().copyWith(
+            primaryColor: primaryColor,
+            colorScheme: ColorScheme.light(
+              primary: primaryColor,
+              secondary: secondaryColor,
+            ),
+          ),
           child: Container(
+            color: backgroundColor,
             child: const Menu(),
           ),
         ),
@@ -208,31 +330,110 @@ class _AccueilState extends State<Accueil> {
       body: PopScope(
         canPop: false,
         onPopInvoked: (value) => close(),
-        child: Container(
+        child: SafeArea(
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 20),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  children: [
-                    const Text(
-                      'Bonjour, ',
-                      style: TextStyle(color: Colors.black),
+              // Section de bienvenue
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                decoration: BoxDecoration(
+                  color: backgroundColor,
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(24),
+                    bottomRight: Radius.circular(24),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 20,
+                      offset: const Offset(0, 4),
                     ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: primaryColor.withOpacity(0.1),
+                            border: Border.all(
+                              color: primaryColor.withOpacity(0.3),
+                              width: 2,
+                            ),
+                          ),
+                          child: userInfo != null && userInfo['photo'] != null
+                              ? CircleAvatar(
+                            backgroundImage: NetworkImage(
+                                'https://rh.madgi.ci/${userInfo['photo']}'),
+                          )
+                              : Icon(
+                            Icons.person,
+                            color: primaryColor,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Bonjour,',
+                                style: TextStyle(
+                                  color: textColor.withOpacity(0.7),
+                                  fontSize: 14,
+                                ),
+                              ),
+                              Text(
+                                userInfo != null ? userInfo['nom'] ?? '' : 'Chargement...',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: textColor,
+                                  fontSize: 20,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
                     Text(
-                      userInfo != null ? userInfo['nom'] ?? '' : 'Chargement...',
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black
+                      'Bienvenue sur votre espace personnel',
+                      style: TextStyle(
+                        color: secondaryColor,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
+
+              // Section actualités (carousel)
+              const SizedBox(height: 24),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Text(
+                  'Actualités',
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
               SizedBox(
-                height: 200,
+                height: 180,
                 child: PageView(
                   controller: _pageController,
                   onPageChanged: (int page) {
@@ -241,372 +442,271 @@ class _AccueilState extends State<Accueil> {
                     });
                   },
                   children: [
-                    Container(
-                      child: Stack(
-                        children: [
-                          Image.asset(
-                            'assets/activite1.jpg',
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                          ),
-                          const Positioned(
-                            bottom: 10,
-                            left: 10,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  "Le PASS",
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 40,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                SizedBox(height: 15),
-                                Text(
-                                  "Formation des délégués de la MADGI au siège",
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.normal,
-                                    fontSize: 18,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                SizedBox(height: 20),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
+                    _buildNewsSlide(
+                      image: 'assets/activite1.jpg',
+                      title: 'Le PASS',
+                      subtitle: 'Formation des délégués de la MADGI au siège',
                     ),
-                    Container(
-                      child: Stack(
-                        children: [
-                          Image.asset(
-                            'assets/activite4.jpg',
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                          ),
-                          const Positioned(
-                            bottom: 10,
-                            left: 10,
-                            child: Text(
-                              'Assemblée Générale mixte: La mutelle fait son bilan',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.normal,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                    _buildNewsSlide(
+                      image: 'assets/activite4.jpg',
+                      title: 'Assemblée Générale',
+                      subtitle: 'La mutuelle fait son bilan annuel',
                     ),
-                    Container(
-                      child: Image.asset(
-                        'assets/activite6.jpg',
-                        fit: BoxFit.cover,
-                        width: double.infinity,
-                      ),
+                    _buildNewsSlide(
+                      image: 'assets/activite6.jpg',
+                      title: 'Événements',
+                      subtitle: 'Découvrez nos dernières activités',
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  for (int i = 0; i < 3; i++)
-                    Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 4.0),
-                      width: 12.0,
-                      height: 12.0,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: _currentPage == i ? Colors.blue : Colors.grey,
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-                    child: Container(
-                      width: double.infinity,
-                      height: 300,
-                      color: Colors.white,
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                InkWell(
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => const Informations(),
-                                      ),
-                                    );
-                                  },
-                                  borderRadius: BorderRadius.circular(30),
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF406ACC),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    width: double.infinity,
-                                    height: (300 / 2) - 2.5,
-                                    child: const Center(
-                                      child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Icon(
-                                            Icons.message_outlined,
-                                            color: Colors.white,
-                                            size: 25,
-                                          ),
-                                          SizedBox(height: 8),
-                                          Text(
-                                            'Informations',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 20,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 5),
-                                InkWell(
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => const Conger(),
-                                      ),
-                                    );
-                                  },
-                                  borderRadius: BorderRadius.circular(30),
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFA7BAE8),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    width: double.infinity,
-                                    height: (300 / 2) - 2.5,
-                                    child: const Center(
-                                      child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Icon(
-                                            Icons.beach_access,
-                                            color: Colors.white,
-                                            size: 25,
-                                          ),
-                                          SizedBox(height: 8),
-                                          Text(
-                                            'Congés',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 20,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 5),
-                          Expanded(
-                            child: InkWell(
-                              onTap: () {
-                                try {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(builder: (context) => const Clique()),
-                                  );
-                                } catch (e) {
-                                  print('❌ Erreur navigation vers Clique: $e');
-                                }
-                              },
-                              borderRadius: BorderRadius.circular(30),
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFFCBA6C),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                width: double.infinity,
-                                height: double.infinity,
-                                child: const Center(
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        Icons.check_circle,
-                                        color: Colors.white,
-                                        size: 40,
-                                      ),
-                                      SizedBox(height: 8),
-                                      Text(
-                                        'Emarger',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+              const SizedBox(height: 16),
+              _buildSlideIndicator(),
+
+              // Section services
+              const SizedBox(height: 32),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Text(
+                  'Services rapides',
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: GridView.count(
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 16,
+                    crossAxisSpacing: 16,
+                    childAspectRatio: 1.1,
+                    children: [
+                      _buildServiceCard(
+                        icon: Icons.message_outlined,
+                        title: 'Informations',
+                        color: secondaryColor,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const Informations(),
+                            ),
+                          );
+                        },
+                      ),
+                      _buildServiceCard(
+                        icon: Icons.beach_access,
+                        title: 'Gestion des congés',
+                        color: accentColor,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const Conger(),
+                            ),
+                          );
+                        },
+                      ),
+                      _buildServiceCard(
+                        icon: Icons.check_circle,
+                        title: 'Pointage\nEmarger',
+                        color: primaryColor,
+                        onTap: () {
+                          try {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const Clique()),
+                            );
+                          } catch (e) {
+                            print('❌ Erreur navigation vers Clique: $e');
+                          }
+                        },
+                        iconSize: 32,
+                      ),
+                      _buildServiceCard(
+                        icon: Icons.calendar_today,
+                        title: 'Planning',
+                        color: const Color(0xFF805AD5),
+                        onTap: () {
+                          // Ajouter la navigation vers Planning
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
             ],
           ),
         ),
       ),
       bottomNavigationBar: Container(
-        width: double.infinity,
         height: 80,
-        decoration: const BoxDecoration(
-          color: Colors.white,
+        decoration: BoxDecoration(
+          color: backgroundColor,
           boxShadow: [
             BoxShadow(
-              color: Color(0x3F000000),
-              blurRadius: 25,
-              offset: Offset(0, -3),
-              spreadRadius: 0,
-            )
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 20,
+              offset: const Offset(0, -2),
+            ),
+          ],
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _buildNavItem(
+              icon: Icons.home_filled,
+              label: 'Accueil',
+              isActive: true,
+            ),
+            _buildNavItem(
+              icon: Icons.beach_access,
+              label: 'Congés',
+              isActive: false,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const Conger(),
+                  ),
+                );
+              },
+            ),
+            _buildNavItem(
+              icon: Icons.info_outline,
+              label: 'Infos',
+              isActive: false,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const Informations(),
+                  ),
+                );
+              },
+            ),
+            _buildNavItem(
+              icon: Icons.person_outline,
+              label: 'Profil',
+              isActive: false,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ProfileScreen(),
+                  ),
+                );
+              },
+            ),
           ],
         ),
-        child: Padding(
-          padding: const EdgeInsets.only(left: 28, right: 28, top: 0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      ),
+    );
+  }
+
+  Widget _buildNewsSlide({
+    required String image,
+    required String title,
+    required String subtitle,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          image: DecorationImage(
+            image: AssetImage(image),
+            fit: BoxFit.cover,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: LinearGradient(
+              begin: Alignment.bottomCenter,
+              end: Alignment.topCenter,
+              colors: [
+                Colors.black.withOpacity(0.7),
+                Colors.transparent,
+              ],
+            ),
+          ),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.end,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.home, color: Color(0xFF406ACC)),
-                    onPressed: () {
-                      // Déjà sur la page d'accueil
-                    },
-                  ),
-                  const SizedBox(height: 2),
-                  const Text(
-                    'Accueil',
-                    style: TextStyle(
-                      color: Color(0xFF406ACC),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                ],
+              Text(
+                title,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.beach_access, color: Colors.black),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const Conger(),
-                        ),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 2),
-                  const Text(
-                    'Congé',
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                ],
-              ),
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.history, color: Color(0xFF0F0F0F)),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const Informations(),
-                        ),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 2),
-                  const Text(
-                    'Informations',
-                    style: TextStyle(
-                      color: Color(0xFF0F0F0F),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                ],
-              ),
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: CircleAvatar(
-                      radius: 13,
-                      backgroundColor: Colors.grey[300],
-                      backgroundImage: userInfo != null && userInfo['photo'] != null
-                          ? NetworkImage('https://rh.madgi.ci/${userInfo['photo']}')
-                          : const AssetImage('assets/default_avatar.png') as ImageProvider,
-                      child: userInfo == null || userInfo['photo'] == null
-                          ? const Icon(Icons.person, size: 16, color: Colors.grey)
-                          : null,
-                    ),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ProfileScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 2),
-                  const Text(
-                    'Profil',
-                    style: TextStyle(
-                      color: Color(0xFF0F0F0F),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                ],
+              const SizedBox(height: 8),
+              Text(
+                subtitle,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem({
+    required IconData icon,
+    required String label,
+    required bool isActive,
+    VoidCallback? onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              color: isActive ? primaryColor : textColor.withOpacity(0.6),
+              size: 24,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: isActive ? primaryColor : textColor.withOpacity(0.6),
+                fontSize: 12,
+                fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+              ),
+            ),
+          ],
         ),
       ),
     );
