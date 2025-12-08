@@ -34,7 +34,7 @@ class _NotificationsState extends State<Notifications> {
         'Accept': 'application/json',
         'Authorization': 'Bearer ${json.decode(prefs.getString('userInfo')!)['token']}'
       };
-      var request = http.Request('GET', Uri.parse('https://rh.madgi.ci/api/v1/user-info'));
+      var request = http.Request('GET', Uri.parse('http://192.168.1.5:8000/api/v1/user-info'));
       request.body = json.encode({'user_id': '${json.decode(prefs.getString('userInfo')!)['user']['id']}'});
       request.headers.addAll(headers);
       http.StreamedResponse response = await request.send();
@@ -55,7 +55,7 @@ class _NotificationsState extends State<Notifications> {
         'Accept': 'application/json',
         'Authorization': 'Bearer ${json.decode(prefs.getString('userInfo')!)['token']}'
       };
-      var request = http.Request('GET', Uri.parse('https://rh.madgi.ci/api/v1/infos'));
+      var request = http.Request('GET', Uri.parse('http://192.168.1.5:8000/api/v1/infos'));
       request.body = json.encode({'user_id': '${json.decode(prefs.getString('userInfo')!)['user']['id']}'});
       request.headers.addAll(headers);
       http.StreamedResponse response = await request.send();

@@ -50,7 +50,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         'Accept': 'application/json',
         'Authorization': 'Bearer ${json.decode(prefs.getString('userInfo')!)['token']}'
       };
-      var request = http.Request('GET', Uri.parse('http://192.168.1.12:8000/api/v1/user-info'));
+      var request = http.Request('GET', Uri.parse('http://192.168.1.5:8000/api/v1/user-info'));
       request.body = json.encode({'user_id': '${json.decode(prefs.getString('userInfo')!)['user']['id']}'});
       request.headers.addAll(headers);
       http.StreamedResponse response = await request.send();
@@ -339,7 +339,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse('http://192.168.1.12:8000/api/v1/update-user'),
+        Uri.parse('http://192.168.1.5:8000/api/v1/update-user'),
       );
 
       request.fields.addAll({
@@ -386,7 +386,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse('http://192.168.1.12:8000/api/v1/update-user'),
+        Uri.parse('http://192.168.1.5:8000/api/v1/update-user'),
       );
 
       request.fields.addAll({

@@ -74,11 +74,11 @@ class _CliqueState extends State<Clique> {
       };
 
       final response = await http.get(
-        Uri.parse('http://192.168.1.12:8000/api/v1/registers'),
+        Uri.parse('http://192.168.1.5:8000/api/v1/registers'),
         headers: headers,
       );
 
-      print('📤 Requête envoyée à: http://192.168.1.12:8000/api/v1/registers');
+      print('📤 Requête envoyée à: http://192.168.1.5:8000/api/v1/registers');
       print('📥 Réponse: ${response.statusCode}');
 
       if (response.statusCode == 200) {
@@ -251,7 +251,7 @@ class _CliqueState extends State<Clique> {
       }
 
       final response = await http.post(
-        Uri.parse('http://192.168.1.12:8000/api/v1/scan-emargement'),
+        Uri.parse('http://192.168.1.5:8000/api/v1/scan-emargement'),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',

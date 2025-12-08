@@ -16,7 +16,6 @@ class Menu extends StatefulWidget {
 }
 
 class _MenuState extends State<Menu> {
-  // Utilisation des mêmes couleurs que l'accueil
   static const Color primaryColor = Color(0xFFF77F00);
   static const Color secondaryColor = Color(0xFF009A44);
   static const Color backgroundColor = Color(0xFFFFFFFF);
@@ -45,9 +44,13 @@ class _MenuState extends State<Menu> {
             'Authorization': 'Bearer $token'
           };
 
-          var request = http.Request('POST', Uri.parse('http://192.168.1.12:8000/api/v1/connexion'));
-          request.headers.addAll(headers);
+          // 🔥 Changement ici : route logout conservant la même logique
+          var request = http.Request(
+              'POST',
+              Uri.parse('http://192.168.1.5:8000/api/v1/logout')
+          );
 
+          request.headers.addAll(headers);
           http.StreamedResponse response = await request.send();
 
           if (response.statusCode == 200) {
@@ -249,7 +252,6 @@ class _MenuState extends State<Menu> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // En-tête du menu
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
               decoration: BoxDecoration(
@@ -315,7 +317,6 @@ class _MenuState extends State<Menu> {
               ),
             ),
 
-            // Section navigation
             Padding(
               padding: const EdgeInsets.only(top: 24, left: 24, bottom: 8),
               child: Text(
@@ -353,7 +354,7 @@ class _MenuState extends State<Menu> {
                         Navigator.pushReplacement(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => Acceuil(),
+                            builder: (context) => Accueil(),
                           ),
                         );
                       },
@@ -374,7 +375,6 @@ class _MenuState extends State<Menu> {
 
                     const SizedBox(height: 8),
 
-                    // Séparateur
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 24),
                       child: Divider(
@@ -414,7 +414,6 @@ class _MenuState extends State<Menu> {
               ),
             ),
 
-            // Bouton de déconnexion
             Padding(
               padding: const EdgeInsets.all(24),
               child: Container(
@@ -456,7 +455,6 @@ class _MenuState extends State<Menu> {
               ),
             ),
 
-            // Version et informations
             Padding(
               padding: const EdgeInsets.only(bottom: 20),
               child: Center(

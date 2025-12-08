@@ -6,6 +6,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:madgi_mobile/BlocAcceuil/clique.dart';
 import 'package:madgi_mobile/BlocAcceuil/conger.dart';
+import 'package:madgi_mobile/BlocAcceuil/contact_us.dart';
 import 'package:madgi_mobile/BlocAcceuil/informations.dart';
 import 'package:madgi_mobile/BlocAcceuil/menu.dart';
 import 'package:madgi_mobile/BlocAcceuil/notification.dart';
@@ -13,6 +14,7 @@ import 'package:madgi_mobile/BlocAcceuil/profilscreen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:badges/badges.dart' as badges;
+import 'package:madgi_mobile/BlocAcceuil/actualites_completes.dart';
 
 class Accueil extends StatefulWidget {
   const Accueil({Key? key}) : super(key: key);
@@ -37,6 +39,28 @@ class _AccueilState extends State<Accueil> {
   static const Color mediumGray = Color(0xFFE2E8F0);
   static const Color accentColor = Color(0xFF2B6CB0); // Bleu pour accents
 
+  // Liste des images d'actualités depuis assets
+  final List<Map<String, String>> actualites = [
+    {
+      'image': 'assets/activite1.jpg',
+      'title': 'Le PASS',
+      'subtitle': 'Formation des délégués de la MADGI au siège',
+      'badge': 'Nouveau',
+    },
+    {
+      'image': 'assets/activite4.jpg',
+      'title': 'Assemblée Générale',
+      'subtitle': 'La mutuelle fait son bilan annuel',
+      'badge': 'Événement',
+    },
+    {
+      'image': 'assets/activite6.jpg',
+      'title': 'Campagne Spéciale',
+      'subtitle': 'Découvrez nos dernières offres promotionnelles',
+      'badge': 'Promo',
+    },
+  ];
+
   Future getUserInfo() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -57,7 +81,7 @@ class _AccueilState extends State<Accueil> {
         'Authorization': 'Bearer $token'
       };
 
-      var request = http.Request('GET', Uri.parse('http://rh.madgi.ci/api/v1/user-info'));
+      var request = http.Request('GET', Uri.parse('http://192.168.1.5:8000/api/v1/user-info'));
       request.body = json.encode({'user_id': userId});
       request.headers.addAll(headers);
 
@@ -98,7 +122,7 @@ class _AccueilState extends State<Accueil> {
         'Authorization': 'Bearer $token'
       };
 
-      var request = http.Request('GET', Uri.parse('http://192.168.1.12:8000/api/v1/infos'));
+      var request = http.Request('GET', Uri.parse('http://192.168.1.5:8000/api/v1/infos'));
       request.body = json.encode({'user_id': userId});
       request.headers.addAll(headers);
 
@@ -219,7 +243,7 @@ class _AccueilState extends State<Accueil> {
   Widget _buildSlideIndicator() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(3, (index) {
+      children: List.generate(actualites.length, (index) {
         return AnimatedContainer(
           duration: const Duration(milliseconds: 300),
           margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -242,10 +266,32 @@ class _AccueilState extends State<Accueil> {
         backgroundColor: backgroundColor,
         elevation: 0,
         centerTitle: true,
-        title: Image.asset(
-          'assets/images.jpg',
-          height: 40,
-          fit: BoxFit.contain,
+        title: Column(
+          children: [
+            // Logo de l'application depuis assets
+            Image.asset(
+              'assets/logo_madgi.png', // Remplacez par le nom exact de votre fichier logo
+              height: 35,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) {
+                // Fallback si l'image n'existe pas
+                return Image.asset(
+                  'assets/images.jpg',
+                  height: 35,
+                  fit: BoxFit.contain,
+                );
+              },
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'MADGI Mobile',
+              style: TextStyle(
+                color: primaryColor,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
         ),
         leading: Builder(
           builder: (context) => IconButton(
@@ -370,7 +416,7 @@ class _AccueilState extends State<Accueil> {
                           child: userInfo != null && userInfo['photo'] != null
                               ? CircleAvatar(
                             backgroundImage: NetworkImage(
-                                'https://rh.madgi.ci/${userInfo['photo']}'),
+                                'http://192.168.1.5:8000/${userInfo['photo']}'),
                           )
                               : Icon(
                             Icons.person,
@@ -419,215 +465,327 @@ class _AccueilState extends State<Accueil> {
               ),
 
               // Section actualités (carousel)
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
+              // ... dans le build method, dans la section Actualités
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Text(
-                  'Actualités',
-                  style: TextStyle(
-                    color: textColor,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Actualités',
+                      style: TextStyle(
+                        color: textColor,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        // Navigation vers l'écran des actualités complètes
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ActualitesCompletesScreen(),
+                          ),
+                        );
+                      },
+                      child: Text(
+                        'Voir tout',
+                        style: TextStyle(
+                          color: primaryColor,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               SizedBox(
-                height: 180,
-                child: PageView(
+                height: 160,
+                child: PageView.builder(
                   controller: _pageController,
                   onPageChanged: (int page) {
                     setState(() {
                       _currentPage = page;
                     });
                   },
+                  itemCount: actualites.length,
+                  itemBuilder: (context, index) {
+                    final actualite = actualites[index];
+                    return _buildNewsSlide(
+                      imageAsset: actualite['image']!,
+                      title: actualite['title']!,
+                      subtitle: actualite['subtitle']!,
+                      badgeText: actualite['badge']!,
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 12),
+              _buildSlideIndicator(),
+
+              // Section services - FIXE (non scrollable)
+              const SizedBox(height: 20),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildNewsSlide(
-                      image: 'assets/activite1.jpg',
-                      title: 'Le PASS',
-                      subtitle: 'Formation des délégués de la MADGI au siège',
+                    Text(
+                      'Services rapides',
+                      style: TextStyle(
+                        color: textColor,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                    _buildNewsSlide(
-                      image: 'assets/activite4.jpg',
-                      title: 'Assemblée Générale',
-                      subtitle: 'La mutuelle fait son bilan annuel',
-                    ),
-                    _buildNewsSlide(
-                      image: 'assets/activite6.jpg',
-                      title: 'Événements',
-                      subtitle: 'Découvrez nos dernières activités',
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: primaryColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '4 services',
+                        style: TextStyle(
+                          color: primaryColor,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
-              _buildSlideIndicator(),
+              const SizedBox(height: 12),
 
-              // Section services
-              const SizedBox(height: 32),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Text(
-                  'Services rapides',
-                  style: TextStyle(
-                    color: textColor,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
+              // Section services FIXE (ne scroll plus)
               Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: GridView.count(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 16,
-                    crossAxisSpacing: 16,
-                    childAspectRatio: 1.1,
-                    children: [
-                      _buildServiceCard(
-                        icon: Icons.message_outlined,
-                        title: 'Informations',
-                        color: secondaryColor,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const Informations(),
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
+                      children: [
+                        // Grille de services (2x2)
+                        GridView.count(
+                          crossAxisCount: 2,
+                          mainAxisSpacing: 16,
+                          crossAxisSpacing: 16,
+                          childAspectRatio: 1.1,
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          children: [
+                            _buildServiceCard(
+                              icon: Icons.message_outlined,
+                              title: 'Informations',
+                              color: secondaryColor,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const Informations(),
+                                  ),
+                                );
+                              },
                             ),
-                          );
-                        },
-                      ),
-                      _buildServiceCard(
-                        icon: Icons.beach_access,
-                        title: 'Gestion des congés',
-                        color: accentColor,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const Conger(),
+                            _buildServiceCard(
+                              icon: Icons.beach_access,
+                              title: 'Gestion des congés',
+                              color: accentColor,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const Conger(),
+                                  ),
+                                );
+                              },
                             ),
-                          );
-                        },
-                      ),
-                      _buildServiceCard(
-                        icon: Icons.check_circle,
-                        title: 'Pointage\nEmarger',
-                        color: primaryColor,
-                        onTap: () {
-                          try {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => const Clique()),
-                            );
-                          } catch (e) {
-                            print('❌ Erreur navigation vers Clique: $e');
-                          }
-                        },
-                        iconSize: 32,
-                      ),
-                      _buildServiceCard(
-                        icon: Icons.calendar_today,
-                        title: 'Planning',
-                        color: const Color(0xFF805AD5),
-                        onTap: () {
-                          // Ajouter la navigation vers Planning
-                        },
-                      ),
-                    ],
+                            _buildServiceCard(
+                              icon: Icons.check_circle,
+                              title: 'Pointage\nEmarger',
+                              color: primaryColor,
+                              onTap: () {
+                                try {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (context) => const Clique()),
+                                  );
+                                } catch (e) {
+                                  print('❌ Erreur navigation vers Clique: $e');
+                                }
+                              },
+                              iconSize: 32,
+                            ),
+                            _buildServiceCard(
+                              icon: Icons.contact_emergency,
+                              title: 'Contactez Nous',
+                              color: const Color(0xFF805AD5),
+                              onTap: () {
+                                // Ajouter la navigation vers Contact us
+                                try {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (context) => const ContactPage()), // ← CORRECT
+                                  );
+                                } catch (e) {
+                                  print('❌ Erreur navigation vers Contact us: $e');
+                                }
+                              },
+                              iconSize: 32,
+                            ),
+                          ],
+                        ),
+
+                        // Espace pour le contenu supplémentaire
+                        const SizedBox(height: 20),
+
+                        // Section informations rapides (optionnelle)
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: backgroundColor,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.info_outline,
+                                color: primaryColor,
+                                size: 24,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'À noter',
+                                      style: TextStyle(
+                                        color: textColor,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Consultez régulièrement les actualités pour rester informé',
+                                      style: TextStyle(
+                                        color: textColor.withOpacity(0.7),
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 40), // Espace pour la barre de navigation
+                      ],
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
             ],
           ),
         ),
       ),
       bottomNavigationBar: Container(
-        height: 80,
+        height: 70,
         decoration: BoxDecoration(
-          color: backgroundColor,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 20,
-              offset: const Offset(0, -2),
-            ),
-          ],
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(24),
-            topRight: Radius.circular(24),
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _buildNavItem(
-              icon: Icons.home_filled,
-              label: 'Accueil',
-              isActive: true,
-            ),
-            _buildNavItem(
-              icon: Icons.beach_access,
-              label: 'Congés',
-              isActive: false,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const Conger(),
-                  ),
-                );
-              },
-            ),
-            _buildNavItem(
-              icon: Icons.info_outline,
-              label: 'Infos',
-              isActive: false,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const Informations(),
-                  ),
-                );
-              },
-            ),
-            _buildNavItem(
-              icon: Icons.person_outline,
-              label: 'Profil',
-              isActive: false,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ProfileScreen(),
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
+            color: backgroundColor,
+            boxShadow: [
+        BoxShadow(
+        color: Colors.black.withOpacity(0.1),
+        blurRadius: 20,
+        offset: const Offset(0, -2),
       ),
+    ],
+    borderRadius: const BorderRadius.only(
+    topLeft: Radius.circular(20),
+    topRight: Radius.circular(20),
+    ),
+    ),
+    child: Padding(
+    padding: const EdgeInsets.only(bottom: 6),
+    child: Row(
+    mainAxisAlignment: MainAxisAlignment.spaceAround,
+    children: [
+    _buildNavItem(
+    icon: Icons.home_filled,
+    label: 'Accueil',
+    isActive: true,
+    ),
+    _buildNavItem(
+    icon: Icons.beach_access,
+    label: 'Congés',
+    isActive: false,
+    onTap: () {
+    Navigator.push(
+    context,
+    MaterialPageRoute(
+    builder: (context) => const Conger(),
+    ),
+    );
+    },
+    ),
+    _buildNavItem(
+    icon: Icons.info_outline,
+    label: 'Infos',
+    isActive: false,
+    onTap: () {
+    Navigator.push(
+    context,
+    MaterialPageRoute(
+    builder: (context) => const Informations(),
+    ),
+    );
+    },
+    ),
+    _buildNavItem(
+    icon: Icons.person_outline,
+    label: 'Profil',
+    isActive: false,
+    onTap: () {
+    Navigator.push(
+    context,
+    MaterialPageRoute(
+    builder: (context) => ProfileScreen(),
+    ),
+    );
+    },
+    ),
+    ],
+    ),
+    ),
+    ),
     );
   }
 
   Widget _buildNewsSlide({
-    required String image,
+    required String imageAsset,
     required String title,
     required String subtitle,
+    String? badgeText,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8),
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
-          image: DecorationImage(
-            image: AssetImage(image),
-            fit: BoxFit.cover,
-          ),
+          color: primaryColor.withOpacity(0.1),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.1),
@@ -636,40 +794,107 @@ class _AccueilState extends State<Accueil> {
             ),
           ],
         ),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            gradient: LinearGradient(
-              begin: Alignment.bottomCenter,
-              end: Alignment.topCenter,
-              colors: [
-                Colors.black.withOpacity(0.7),
-                Colors.transparent,
-              ],
-            ),
-          ),
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.end,
-            crossAxisAlignment: CrossAxisAlignment.start,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Stack(
             children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
+              // Image de fond depuis assets
+              Image.asset(
+                imageAsset,
+                fit: BoxFit.cover,
+                width: double.infinity,
+                height: double.infinity,
+                errorBuilder: (context, error, stackTrace) {
+                  // Fallback si l'image n'existe pas dans assets
+                  return Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          primaryColor.withOpacity(0.3),
+                          secondaryColor.withOpacity(0.3),
+                        ],
+                      ),
+                    ),
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.newspaper,
+                            color: Colors.white.withOpacity(0.5),
+                            size: 60,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            title,
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.7),
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
               ),
-              const SizedBox(height: 8),
-              Text(
-                subtitle,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
+              // Overlay avec contenu
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    colors: [
+                      Colors.black.withOpacity(0.7),
+                      Colors.transparent,
+                    ],
+                  ),
                 ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (badgeText != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        margin: const EdgeInsets.only(bottom: 8),
+                        decoration: BoxDecoration(
+                          color: primaryColor,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          badgeText,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -688,21 +913,29 @@ class _AccueilState extends State<Accueil> {
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              color: isActive ? primaryColor : textColor.withOpacity(0.6),
-              size: 24,
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isActive ? primaryColor.withOpacity(0.1) : Colors.transparent,
+              ),
+              child: Icon(
+                icon,
+                color: isActive ? primaryColor : textColor.withOpacity(0.6),
+                size: 22,
+              ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 2),
             Text(
               label,
               style: TextStyle(
                 color: isActive ? primaryColor : textColor.withOpacity(0.6),
-                fontSize: 12,
+                fontSize: 11,
                 fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
               ),
             ),

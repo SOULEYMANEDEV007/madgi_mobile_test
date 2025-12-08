@@ -135,7 +135,7 @@ class _ConnexionState extends State<Connexion> {
     });
 
     try {
-      final url = Uri.parse('http://192.168.01.12:8000/api/v1/connexion');
+      final url = Uri.parse('http://192.168.01.5:8000/api/v1/connexion');
 
       final response = await http.post(
         url,
@@ -266,7 +266,7 @@ class _ConnexionState extends State<Connexion> {
     }
   }
 
-  Widget _buildHeader() {
+  /*Widget _buildHeader() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 40),
       child: AnimatedOpacity(
@@ -287,6 +287,57 @@ class _ConnexionState extends State<Connexion> {
                 Icons.qr_code_scanner,
                 color: primaryColor,
                 size: 60,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'MADGI',
+              style: TextStyle(
+                color: textColor,
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.2,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Connexion à votre espace',
+              style: TextStyle(
+                color: textColor.withOpacity(0.6),
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }*/
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 40),
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 500),
+        opacity: _isVisible ? 1 : 0,
+        curve: Curves.easeInOut,
+        child: Column(
+          children: [
+            // Logo ou icône - Remplacé par votre image
+            Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                color: primaryColor.withOpacity(0.1),
+                shape: BoxShape.circle,
+                // Option 1: Si vous voulez garder le cercle de fond
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(60), // Pour un logo rond
+                child: Image.asset(
+                  'assets/images.jpg', // Chemin vers votre logo
+                  fit: BoxFit.contain,
+                  width: 100,
+                  height: 100,
+                ),
               ),
             ),
             const SizedBox(height: 24),
@@ -439,7 +490,7 @@ class _ConnexionState extends State<Connexion> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Row(
+            /*Row(
               children: [
                 Checkbox(
                   value: _rememberMe,
@@ -468,7 +519,7 @@ class _ConnexionState extends State<Connexion> {
                   ),
                 ),
               ],
-            ),
+            ),*/
             GestureDetector(
               onTap: _isLoading
                   ? null
@@ -506,7 +557,7 @@ class _ConnexionState extends State<Connexion> {
               color: textColor.withOpacity(0.7),
               fontSize: 14,
             ),
-            children: [
+            /*children: [
               const TextSpan(
                 text: 'Pas de compte ? ',
               ),
@@ -526,7 +577,7 @@ class _ConnexionState extends State<Connexion> {
                     );
                   },
               ),
-            ],
+            ],*/
           ),
         ),
       ),
