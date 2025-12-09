@@ -81,7 +81,7 @@ class _AccueilState extends State<Accueil> {
         'Authorization': 'Bearer $token'
       };
 
-      var request = http.Request('GET', Uri.parse('http://192.168.1.5:8000/api/v1/user-info'));
+      var request = http.Request('GET', Uri.parse('http://192.168.1.4:8000/api/v1/user-info'));
       request.body = json.encode({'user_id': userId});
       request.headers.addAll(headers);
 
@@ -122,7 +122,7 @@ class _AccueilState extends State<Accueil> {
         'Authorization': 'Bearer $token'
       };
 
-      var request = http.Request('GET', Uri.parse('http://192.168.1.5:8000/api/v1/infos'));
+      var request = http.Request('GET', Uri.parse('http://192.168.1.4:8000/api/v1/infos'));
       request.body = json.encode({'user_id': userId});
       request.headers.addAll(headers);
 
@@ -276,7 +276,7 @@ class _AccueilState extends State<Accueil> {
               errorBuilder: (context, error, stackTrace) {
                 // Fallback si l'image n'existe pas
                 return Image.asset(
-                  'assets/images.jpg',
+                  'assets/logo.jpg',
                   height: 35,
                   fit: BoxFit.contain,
                 );
@@ -416,7 +416,7 @@ class _AccueilState extends State<Accueil> {
                           child: userInfo != null && userInfo['photo'] != null
                               ? CircleAvatar(
                             backgroundImage: NetworkImage(
-                                'http://192.168.1.5:8000/${userInfo['photo']}'),
+                                'http://192.168.1.4:8000/${userInfo['photo']}'),
                           )
                               : Icon(
                             Icons.person,

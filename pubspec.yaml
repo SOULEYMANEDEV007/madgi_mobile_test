@@ -37,17 +37,11 @@ dev_dependencies:
   flutter_launcher_icons: "^0.13.1"
   flutter_lints: ^3.0.0
 
-# Configuration pour les icônes de l'application - DOIT ÊTRE AU NIVEAU RACINE
-flutter_icons:
-  android: true
+# CONFIGURATION DES ICONES - NE PAS METTRE "flutter_icons:"
+flutter_launcher_icons:
+  android: "launcher_icon"
   ios: true
-  image_path: "assets/images.jpg"  # Votre logo principal
-  image_path_android: "assets/images.jpg"
-  image_path_ios: "assets/images.jpg"
-
-  # Optionnel : pour un logo adaptatif (Android)
-  adaptive_icon_background: "#FFFFFF"  # Couleur de fond
-  adaptive_icon_foreground: "assets/images.jpg"
+  image_path: "assets/logo.jpg"
 
 flutter:
   uses-material-design: true

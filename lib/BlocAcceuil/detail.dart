@@ -208,7 +208,7 @@ class _DetailState extends State<Detail> {
     }
 
     final firstMedia = widget.data['medias'].first;
-    final imageUrl = "http://192.168.1.5:8000/${firstMedia['src']}";
+    final imageUrl = "http://192.168.1.4:8000/${firstMedia['src']}";
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),

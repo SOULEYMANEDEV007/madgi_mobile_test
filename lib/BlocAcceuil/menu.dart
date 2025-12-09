@@ -47,7 +47,7 @@ class _MenuState extends State<Menu> {
           // 🔥 Changement ici : route logout conservant la même logique
           var request = http.Request(
               'POST',
-              Uri.parse('http://192.168.1.5:8000/api/v1/logout')
+              Uri.parse('http://192.168.1.4:8000/api/v1/logout')
           );
 
           request.headers.addAll(headers);
@@ -276,7 +276,7 @@ class _MenuState extends State<Menu> {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(12),
                       image: const DecorationImage(
-                        image: AssetImage("assets/images.jpg"),
+                        image: AssetImage("assets/logo.jpg"),
                         fit: BoxFit.cover,
                       ),
                     ),

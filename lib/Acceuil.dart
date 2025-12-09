@@ -623,7 +623,7 @@ class _ScaneState extends State<Scane> with SingleTickerProviderStateMixin {
   Future<void> _sendPointageToAPI(String matricule, String? justificatif) async {
     _log('Envoi pointage à l\'API... ${justificatif != null ? "avec justificatif" : "sans justificatif"}', level: 'INFO');
 
-    final url = 'http://192.168.1.5:8000/api/v1/scan-emargement';
+    final url = 'http://192.168.1.4:8000/api/v1/scan-emargement';
     _log('URL API: $url', level: 'DEBUG');
 
     final Map<String, dynamic> requestData = {

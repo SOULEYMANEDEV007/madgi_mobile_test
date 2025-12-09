@@ -56,7 +56,7 @@ class _ActualitesCompletesScreenState extends State<ActualitesCompletesScreen> {
     },
     {
       'id': 4,
-      'image': 'assets/activite1.jpg', // Remplacez par vos images
+      'image': 'assets/activite2.jpg', // Remplacez par vos images
       'title': 'Journée Portes Ouvertes',
       'subtitle': 'Découverte des services de la MADGI',
       'badge': 'Événement',
@@ -68,7 +68,7 @@ class _ActualitesCompletesScreenState extends State<ActualitesCompletesScreen> {
     },
     {
       'id': 5,
-      'image': 'assets/activite4.jpg', // Remplacez par vos images
+      'image': 'assets/activite3.jpg', // Remplacez par vos images
       'title': 'Formation Digitalisation',
       'subtitle': 'Apprendre à utiliser notre application mobile',
       'badge': 'Formation',
@@ -80,7 +80,7 @@ class _ActualitesCompletesScreenState extends State<ActualitesCompletesScreen> {
     },
     {
       'id': 6,
-      'image': 'assets/activite6.jpg', // Remplacez par vos images
+      'image': 'assets/activite7.jpg', // Remplacez par vos images
       'title': 'Nouveaux Services',
       'subtitle': 'Extension de notre couverture santé',
       'badge': 'Nouveau',
@@ -92,7 +92,7 @@ class _ActualitesCompletesScreenState extends State<ActualitesCompletesScreen> {
     },
     {
       'id': 7,
-      'image': 'assets/activite1.jpg', // Remplacez par vos images
+      'image': 'assets/activite8.jpg', // Remplacez par vos images
       'title': 'Retraite Solidaire',
       'subtitle': 'Programme d\'accompagnement des retraités',
       'badge': 'Social',
@@ -102,7 +102,7 @@ class _ActualitesCompletesScreenState extends State<ActualitesCompletesScreen> {
       'likes': 37,
       'commentaires': 17,
     },
-    {
+    /*{
       'id': 8,
       'image': 'assets/activite4.jpg', // Remplacez par vos images
       'title': 'Concours Internes',
@@ -113,7 +113,7 @@ class _ActualitesCompletesScreenState extends State<ActualitesCompletesScreen> {
       'categorie': 'Ressources Humaines',
       'likes': 22,
       'commentaires': 9,
-    },
+    },*/
   ];
 
   @override

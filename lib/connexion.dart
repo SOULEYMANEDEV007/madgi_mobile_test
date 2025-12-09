@@ -135,7 +135,7 @@ class _ConnexionState extends State<Connexion> {
     });
 
     try {
-      final url = Uri.parse('http://192.168.01.5:8000/api/v1/connexion');
+      final url = Uri.parse('http://192.168.01.4:8000/api/v1/connexion');
 
       final response = await http.post(
         url,
