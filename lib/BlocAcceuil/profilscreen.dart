@@ -3,9 +3,12 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:madgi_mobile/BlocAcceuil/acceuil.dart';
+import 'package:madgi_mobile/BlocAcceuil/conger.dart';
+import 'package:madgi_mobile/BlocAcceuil/informations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -27,7 +30,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   static const Color successColor = Color(0xFF38A169);
 
   TextEditingController usernameTextEditingController = TextEditingController();
-  TextEditingController motdepasseTextEditingController = TextEditingController();
+  TextEditingController motdepasseTextEditingController =
+      TextEditingController();
 
   final GlobalKey<FormState> _formKey = GlobalKey();
   TextEditingController nom = TextEditingController();
@@ -48,10 +52,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
       var headers = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'Authorization': 'Bearer ${json.decode(prefs.getString('userInfo')!)['token']}'
+        'Authorization':
+            'Bearer ${json.decode(prefs.getString('userInfo')!)['token']}'
       };
-      var request = http.Request('GET', Uri.parse('http://192.168.1.4:8000/api/v1/user-info'));
-      request.body = json.encode({'user_id': '${json.decode(prefs.getString('userInfo')!)['user']['id']}'});
+      var request = http.Request(
+          'GET', Uri.parse('${dotenv.get('API_URL')}/user-info'));
+      request.body = json.encode({
+        'user_id': '${json.decode(prefs.getString('userInfo')!)['user']['id']}'
+      });
       request.headers.addAll(headers);
       http.StreamedResponse response = await request.send();
       final data = await response.stream.bytesToString();
@@ -151,36 +159,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: ClipOval(
               child: _isLoading
                   ? Center(
-                child: CircularProgressIndicator(color: primaryColor),
-              )
+                      child: CircularProgressIndicator(color: primaryColor),
+                    )
                   : hasSelectedImage
-                  ? Image.file(
-                File(_selectedImage!.path),
-                fit: BoxFit.cover,
-              )
-                  : hasPhoto
-                  ? Image.network(
-                'https://rh.madgi.ci/${userInfo['photo']}',
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    color: lightGray,
-                    child: Icon(
-                      Icons.person,
-                      color: primaryColor,
-                      size: 48,
-                    ),
-                  );
-                },
-              )
-                  : Container(
-                color: lightGray,
-                child: Icon(
-                  Icons.person,
-                  color: primaryColor,
-                  size: 48,
-                ),
-              ),
+                      ? Image.file(
+                          File(_selectedImage!.path),
+                          fit: BoxFit.cover,
+                        )
+                      : hasPhoto
+                          ? Image.network(
+                              "${dotenv.get('IMAGE_URL')}/${userInfo['photo']}",
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  color: lightGray,
+                                  child: Icon(
+                                    Icons.person,
+                                    color: primaryColor,
+                                    size: 48,
+                                  ),
+                                );
+                              },
+                            )
+                          : Container(
+                              color: lightGray,
+                              child: Icon(
+                                Icons.person,
+                                color: primaryColor,
+                                size: 48,
+                              ),
+                            ),
             ),
           ),
           Positioned(
@@ -217,13 +225,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildTextField(
-      String label,
-      String hint,
-      TextEditingController controller, {
-        bool isPassword = false,
-        bool enabled = true,
-        TextInputType keyboardType = TextInputType.text,
-      }) {
+    String label,
+    String hint,
+    TextEditingController controller, {
+    bool isPassword = false,
+    bool enabled = true,
+    TextInputType keyboardType = TextInputType.text,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -270,15 +278,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(color: primaryColor, width: 2),
               ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               suffixIcon: isPassword
                   ? IconButton(
-                icon: Icon(
-                  _obscureText ? Icons.visibility_off : Icons.visibility,
-                  color: mediumGray,
-                ),
-                onPressed: _togglePasswordVisibility,
-              )
+                      icon: Icon(
+                        _obscureText ? Icons.visibility_off : Icons.visibility,
+                        color: mediumGray,
+                      ),
+                      onPressed: _togglePasswordVisibility,
+                    )
                   : null,
             ),
             validator: (value) {
@@ -334,12 +343,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final prefs = await SharedPreferences.getInstance();
       var headers = {
         'Accept': 'application/json',
-        'Authorization': 'Bearer ${json.decode(prefs.getString('userInfo')!)['token']}'
+        'Authorization':
+            'Bearer ${json.decode(prefs.getString('userInfo')!)['token']}'
       };
 
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse('http://192.168.1.4:8000/api/v1/update-user'),
+        Uri.parse('${dotenv.get('API_URL')}/update-user'),
       );
 
       request.fields.addAll({
@@ -361,7 +371,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         setState(() => userInfo = decode['data']['user']);
         _showMessageDialog('Succès', 'Photo mise à jour avec succès');
       } else {
-        _showMessageDialog('Erreur', decode['message'] ?? 'Erreur lors de la mise à jour');
+        _showMessageDialog(
+            'Erreur', decode['message'] ?? 'Erreur lors de la mise à jour');
       }
     } catch (e) {
       print('❌ Erreur upload image: $e');
@@ -381,12 +392,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       var headers = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'Authorization': 'Bearer ${json.decode(prefs.getString('userInfo')!)['token']}'
+        'Authorization':
+            'Bearer ${json.decode(prefs.getString('userInfo')!)['token']}'
       };
 
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse('http://192.168.1.4:8000/api/v1/update-user'),
+        Uri.parse('${dotenv.get('API_URL')}/update-user'),
       );
 
       request.fields.addAll({
@@ -413,7 +425,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         setState(() => userInfo = decode['data']['user']);
         _showSuccessDialog('Profil mis à jour avec succès');
       } else {
-        _showMessageDialog('Erreur', decode['message'] ?? 'Erreur lors de la mise à jour');
+        _showMessageDialog(
+            'Erreur', decode['message'] ?? 'Erreur lors de la mise à jour');
       }
     } catch (e) {
       print('❌ Erreur mise à jour profil: $e');
@@ -587,13 +600,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _buildHeader(),
             Expanded(
               child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
                 child: Form(
                   key: _formKey,
                   child: Column(
                     children: [
                       const SizedBox(height: 24),
                       _buildProfileImage(),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 16),
                       if (userInfo != null)
                         Text(
                           userInfo['nom'] ?? '',
@@ -612,9 +626,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             fontSize: 14,
                           ),
                         ),
-
                       _buildSection('Informations personnelles'),
-
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 24),
                         child: Column(
@@ -623,18 +635,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               'Nom complet',
                               'Votre nom et prénom',
                               nom,
-                              keyboardType: TextInputType.name,
                             ),
                             const SizedBox(height: 16),
                             _buildTextField(
                               'Matricule',
-                              'Votre numéro de matricule',
+                              'Votre matricule',
                               matricule,
                               enabled: false,
                             ),
                             const SizedBox(height: 16),
                             _buildTextField(
-                              'Numéro de téléphone',
+                              'Téléphone',
                               'Votre numéro de téléphone',
                               tel,
                               keyboardType: TextInputType.phone,
@@ -649,9 +660,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ],
                         ),
                       ),
-
                       const SizedBox(height: 32),
-
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 24),
                         child: SizedBox(
@@ -667,33 +676,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               elevation: 0,
                             ),
                             child: _isSaving
-                                ? SizedBox(
-                              height: 24,
-                              width: 24,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                              ),
-                            )
+                                ? const SizedBox(
+                                    height: 24,
+                                    width: 24,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                          Colors.white),
+                                    ),
+                                  )
                                 : Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.save, color: Colors.white, size: 20),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Enregistrer les modifications',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(Icons.save,
+                                          color: Colors.white, size: 20),
+                                      const SizedBox(width: 8),
+                                      const Text(
+                                        'Enregistrer les modifications',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ),
-                              ],
-                            ),
                           ),
                         ),
                       ),
-
                       const SizedBox(height: 40),
                     ],
                   ),
@@ -702,6 +712,110 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ],
         ),
+      ),
+      bottomNavigationBar: Container(
+        height: MediaQuery.of(context).padding.bottom > 0 ? 85 : 70,
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 20,
+              offset: const Offset(0, -2),
+            ),
+          ],
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
+        ),
+        child: Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).padding.bottom > 0
+                ? MediaQuery.of(context).padding.bottom
+                : 10,
+            top: 5,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildNavItem(
+                icon: Icons.home_filled,
+                label: 'Accueil',
+                isActive: false,
+                onTap: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const Accueil(),
+                    ),
+                  );
+                },
+              ),
+              _buildNavItem(
+                icon: Icons.beach_access,
+                label: 'Congés',
+                isActive: false,
+                onTap: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const Conger(),
+                    ),
+                  );
+                },
+              ),
+              _buildNavItem(
+                icon: Icons.info_outline,
+                label: 'Infos',
+                isActive: false,
+                onTap: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const Informations(),
+                    ),
+                  );
+                },
+              ),
+              _buildNavItem(
+                icon: Icons.person_outline,
+                label: 'Profil',
+                isActive: true,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem({
+    required IconData icon,
+    required String label,
+    required bool isActive,
+    VoidCallback? onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            color: isActive ? primaryColor : textColor.withOpacity(0.4),
+            size: 26,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              color: isActive ? primaryColor : textColor.withOpacity(0.4),
+              fontSize: 12,
+              fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+        ],
       ),
     );
   }

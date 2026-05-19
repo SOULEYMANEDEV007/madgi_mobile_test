@@ -1,5 +1,6 @@
 import 'package:easy_image_viewer/easy_image_viewer.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:madgi_mobile/BlocAcceuil/conger.dart';
 
 class Detail extends StatefulWidget {
@@ -208,7 +209,7 @@ class _DetailState extends State<Detail> {
     }
 
     final firstMedia = widget.data['medias'].first;
-    final imageUrl = "http://192.168.1.4:8000/${firstMedia['src']}";
+    final imageUrl = "${dotenv.get('IMAGE_URL')}/${firstMedia['src']}";
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -267,7 +268,7 @@ class _DetailState extends State<Detail> {
                             child: CircularProgressIndicator(
                               value: loadingProgress.expectedTotalBytes != null
                                   ? loadingProgress.cumulativeBytesLoaded /
-                                  loadingProgress.expectedTotalBytes!
+                                      loadingProgress.expectedTotalBytes!
                                   : null,
                               color: primaryColor,
                             ),
@@ -311,7 +312,8 @@ class _DetailState extends State<Detail> {
                     );
                   },
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),

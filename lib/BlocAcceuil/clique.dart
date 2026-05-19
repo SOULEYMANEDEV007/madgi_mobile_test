@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:date_format/date_format.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:madgi_mobile/BlocAcceuil/acceuil.dart';
 import 'package:madgi_mobile/BlocAcceuil/scane.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -31,6 +32,7 @@ class _CliqueState extends State<Clique> {
   String? userMatricule;
   String? userToken;
   String? userName;
+  final TextEditingController _justificatifController = TextEditingController();
 
   // Initialisation - Récupérer les infos utilisateur
   Future<void> _loadUserInfo() async {
@@ -65,7 +67,9 @@ class _CliqueState extends State<Clique> {
     }
 
     try {
-      setState(() => isLoading = true);
+      if (mounted) {
+        setState(() => isLoading = true);
+      }
 
       var headers = {
         'Content-Type': 'application/json',
@@ -74,36 +78,46 @@ class _CliqueState extends State<Clique> {
       };
 
       final response = await http.get(
-        Uri.parse('http://192.168.1.4:8000/api/v1/registers'),
+        Uri.parse('${dotenv.get('API_URL')}/registers'),
         headers: headers,
       );
 
-      print('📤 Requête envoyée à: http://192.168.1.4:8000/api/v1/registers');
+      print('📤 Requête envoyée à: ${dotenv.get('API_URL')}/registers');
       print('📥 Réponse: ${response.statusCode}');
+
+      if (!mounted) return;
 
       if (response.statusCode == 200) {
         final decode = json.decode(response.body);
 
         if (decode['success'] == true) {
-          setState(() {
-            items = decode['data'] ?? [];
-            isLoading = false;
-          });
+          if (mounted) {
+            setState(() {
+              items = decode['data'] ?? [];
+              isLoading = false;
+            });
+          }
           print('✅ ${items.length} pointages chargés');
         } else {
           print('❌ Erreur API: ${decode['message']}');
           _showErrorSnackbar(decode['message'] ?? 'Erreur lors du chargement');
-          setState(() => isLoading = false);
+          if (mounted) {
+            setState(() => isLoading = false);
+          }
         }
       } else {
         print('❌ Erreur HTTP: ${response.statusCode}');
         _showErrorSnackbar('Erreur serveur (${response.statusCode})');
-        setState(() => isLoading = false);
+        if (mounted) {
+          setState(() => isLoading = false);
+        }
       }
     } catch (e) {
       print('❌ Erreur réseau: $e');
       _showErrorSnackbar('Erreur de connexion: $e');
-      setState(() => isLoading = false);
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     }
   }
 
@@ -156,7 +170,8 @@ class _CliqueState extends State<Clique> {
       return;
     }
 
-    print('🔍 QR Code scanné (tronqué): ${scanResult.length > 200 ? scanResult.substring(0, 200) + '...' : scanResult}');
+    print(
+        '🔍 QR Code scanné (tronqué): ${scanResult.length > 200 ? scanResult.substring(0, 200) + '...' : scanResult}');
 
     try {
       // Essayer de parser le QR code comme JSON
@@ -184,7 +199,8 @@ class _CliqueState extends State<Clique> {
         if (expiresAtStr != null && expiresAtStr.isNotEmpty) {
           expiresAt = DateTime.parse(expiresAtStr);
         } else {
-          final timestamp = DateTime.parse(qrData['timestamp']?.toString() ?? DateTime.now().toIso8601String());
+          final timestamp = DateTime.parse(qrData['timestamp']?.toString() ??
+              DateTime.now().toIso8601String());
           expiresAt = timestamp.add(const Duration(seconds: 10));
         }
       } catch (e) {
@@ -205,36 +221,47 @@ class _CliqueState extends State<Clique> {
       }
 
       final userMatriculeClean = userMatricule!.trim();
-      final isAuthorized = matricules.any((mat) => mat.trim() == userMatriculeClean);
+      final isAuthorized =
+          matricules.any((mat) => mat.trim() == userMatriculeClean);
 
       if (!isAuthorized) {
         print('❌ Matricule "$userMatriculeClean" non trouvé dans la liste');
-        _showErrorSnackbar('Vous n\'êtes pas autorisé à pointer avec ce QR code');
+        _showErrorSnackbar(
+            'Vous n\'êtes pas autorisé à pointer avec ce QR code');
         return;
       }
 
       // Envoyer le pointage à l'API
       await _sendPointageToAPI(sessionId);
-
     } catch (e, stackTrace) {
       print('❌ Erreur traitement QR: $e');
       print('📋 Stack trace: $stackTrace');
 
       // Si le QR code n'est pas un JSON valide
-      print('⚠️ QR code non-JSON, traitement comme matricule direct');
-      await _sendPointageToAPI(null, matriculeDirect: scanResult);
+      if (scanResult != null && scanResult.startsWith('session_')) {
+        print('🔑 QR brut détecté comme Session ID: $scanResult');
+        await _sendPointageToAPI(scanResult);
+      } else {
+        print('⚠️ QR code non-JSON brut, traitement comme matricule direct: $scanResult');
+        await _sendPointageToAPI(null, matriculeDirect: scanResult);
+      }
     }
   }
 
-  // Envoyer le pointage à l'API
-  Future<void> _sendPointageToAPI(String? sessionId, {String? matriculeDirect}) async {
+  Future<void> _sendPointageToAPI(String? sessionId,
+      {String? matriculeDirect, String? justificatif}) async {
     try {
-      setState(() => isLoading = true);
+      if (mounted) {
+        setState(() => isLoading = true);
+      }
 
       final matricule = matriculeDirect ?? userMatricule;
 
       if (matricule == null) {
         _showErrorSnackbar('Matricule non disponible');
+        if (mounted) {
+          setState(() => isLoading = false);
+        }
         return;
       }
 
@@ -250,37 +277,61 @@ class _CliqueState extends State<Clique> {
         requestBody['session_id'] = sessionId;
       }
 
+      if (justificatif != null && justificatif.isNotEmpty) {
+        requestBody['justificatif'] = justificatif;
+      }
+
+      final Map<String, String> headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      };
+
+      if (userToken != null) {
+        headers['Authorization'] = 'Bearer $userToken';
+      }
+
       final response = await http.post(
-        Uri.parse('http://192.168.1.4:8000/api/v1/scan-emargement'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
+        Uri.parse('${dotenv.get('API_URL')}/scan-emargement'),
+        headers: headers,
         body: json.encode(requestBody),
       );
 
       print('📥 Réponse API: ${response.statusCode}');
       print('📥 Body: ${response.body}');
 
-      final result = json.decode(response.body);
+      if (!mounted) return;
 
-      if (result['code'] == 200) {
-        _showSuccessSnackbar(result['message'] ?? 'Pointage enregistré avec succès');
+      final result = json.decode(response.body);
+      final responseCode = result['code'] ?? 0;
+      final message = result['message'] ?? 'Erreur lors du pointage';
+      final justificationRequired = result['justification_required'] ?? false;
+
+      if (responseCode == 200) {
+        _showSuccessSnackbar(
+            result['message'] ?? 'Pointage enregistré avec succès');
         await getRegister();
-        _showPointageDetail(result['data']);
+        if (mounted) {
+          _showPointageDetail(result['data'], message);
+        }
+      } else if (responseCode == 403 && justificationRequired) {
+        _showJustificatifDialog(message, matricule, sessionId);
       } else {
-        _showErrorSnackbar(result['message'] ?? 'Erreur lors du pointage');
-        setState(() => isLoading = false);
+        _showErrorSnackbar(message);
+        if (mounted) {
+          setState(() => isLoading = false);
+        }
       }
     } catch (e) {
       print('❌ Erreur envoi pointage: $e');
       _showErrorSnackbar('Erreur réseau: $e');
-      setState(() => isLoading = false);
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     }
   }
 
   // Afficher le détail du pointage
-  void _showPointageDetail(dynamic pointageData) {
+  void _showPointageDetail(dynamic pointageData, String message) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -312,10 +363,11 @@ class _CliqueState extends State<Clique> {
               ),
               const SizedBox(height: 16),
               Text(
-                'Pointage validé',
+                message.isNotEmpty ? message : 'Pointage validé',
+                textAlign: TextAlign.center,
                 style: TextStyle(
                   color: textColor,
-                  fontSize: 20,
+                  fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -348,13 +400,17 @@ class _CliqueState extends State<Clique> {
                             ],
                           ),
                           const SizedBox(height: 12),
-                          Row(
+                           Row(
                             children: [
-                              Icon(Icons.calendar_today, color: primaryColor, size: 16),
+                              Icon(Icons.calendar_today,
+                                  color: primaryColor, size: 16),
                               SizedBox(width: 8),
-                              Text(
-                                'Date: ${pointageData['date'] ?? ''}',
-                                style: TextStyle(color: textColor.withOpacity(0.7)),
+                              Expanded(
+                                child: Text(
+                                  'Date: ${date(pointageData['date'] ?? '')}',
+                                  style: TextStyle(
+                                      color: textColor.withOpacity(0.7)),
+                                ),
                               ),
                             ],
                           ),
@@ -363,9 +419,12 @@ class _CliqueState extends State<Clique> {
                             children: [
                               Icon(Icons.login, color: primaryColor, size: 16),
                               SizedBox(width: 8),
-                              Text(
-                                'Arrivée: ${pointageData['heure_arrive'] ?? ''}',
-                                style: TextStyle(color: textColor.withOpacity(0.7)),
+                              Expanded(
+                                child: Text(
+                                  'Arrivée: ${pointageData['heure_arrive'] ?? ''}',
+                                  style: TextStyle(
+                                      color: textColor.withOpacity(0.7)),
+                                ),
                               ),
                             ],
                           ),
@@ -373,11 +432,15 @@ class _CliqueState extends State<Clique> {
                             const SizedBox(height: 8),
                             Row(
                               children: [
-                                Icon(Icons.logout, color: primaryColor, size: 16),
+                                Icon(Icons.logout,
+                                    color: primaryColor, size: 16),
                                 SizedBox(width: 8),
-                                Text(
-                                  'Départ: ${pointageData['heure_depart']}',
-                                  style: TextStyle(color: textColor.withOpacity(0.7)),
+                                Expanded(
+                                  child: Text(
+                                    'Départ: ${pointageData['heure_depart']}',
+                                    style: TextStyle(
+                                        color: textColor.withOpacity(0.7)),
+                                  ),
                                 ),
                               ],
                             ),
@@ -392,7 +455,8 @@ class _CliqueState extends State<Clique> {
                               ),
                               child: Row(
                                 children: [
-                                  Icon(Icons.warning, color: warningColor, size: 14),
+                                  Icon(Icons.warning,
+                                      color: warningColor, size: 14),
                                   SizedBox(width: 4),
                                   Text(
                                     'Retard signalé',
@@ -438,6 +502,192 @@ class _CliqueState extends State<Clique> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _showJustificatifDialog(String message, String matricule, String? sessionId) {
+    _justificatifController.clear();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setStateDialog) {
+          bool isSubmitting = false;
+
+          Future<void> _submitJustificatif() async {
+            final justificatif = _justificatifController.text.trim();
+            if (justificatif.isEmpty) {
+              ScaffoldMessenger.of(ctx).showSnackBar(
+                SnackBar(
+                  content: Text('Veuillez saisir un justificatif'),
+                  backgroundColor: errorColor,
+                ),
+              );
+              return;
+            }
+
+            setStateDialog(() => isSubmitting = true);
+
+            try {
+              Navigator.of(ctx).pop();
+              await _sendPointageToAPI(sessionId,
+                  matriculeDirect: matricule, justificatif: justificatif);
+            } catch (e) {
+              setStateDialog(() => isSubmitting = false);
+            }
+          }
+
+          return Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: backgroundColor,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      color: warningColor.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.warning_amber_rounded,
+                      color: warningColor,
+                      size: 32,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    message.contains('Retard')
+                        ? 'Retard détecté'
+                        : 'Départ anticipé',
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    message,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: textColor.withOpacity(0.7),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Veuillez saisir votre justificatif :',
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _justificatifController,
+                    maxLines: 3,
+                    enabled: !isSubmitting,
+                    decoration: InputDecoration(
+                      hintText: 'Saisissez votre justificatif ici...',
+                      hintStyle: TextStyle(color: mediumGray),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: mediumGray),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: mediumGray),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: primaryColor, width: 2),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  if (isSubmitting)
+                    Column(
+                      children: [
+                        CircularProgressIndicator(
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(primaryColor),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Envoi en cours...',
+                          style: TextStyle(
+                            color: textColor.withOpacity(0.7),
+                          ),
+                        ),
+                      ],
+                    )
+                  else
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () {
+                              Navigator.of(ctx).pop();
+                              setState(() => isLoading = false);
+                            },
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              side: BorderSide(color: mediumGray),
+                            ),
+                            child: Text(
+                              'Annuler',
+                              style: TextStyle(
+                                color: textColor,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: _submitJustificatif,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: primaryColor,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text(
+                              'Envoyer',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -651,7 +901,8 @@ class _CliqueState extends State<Clique> {
                 const SizedBox(height: 4),
 
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: warningColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
@@ -764,7 +1015,8 @@ class _CliqueState extends State<Clique> {
                       children: [
                         if (isLate)
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
                               color: warningColor.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(6),
@@ -780,7 +1032,8 @@ class _CliqueState extends State<Clique> {
                           ),
                         if (isEarlyDeparture)
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
                             margin: const EdgeInsets.only(left: 4),
                             decoration: BoxDecoration(
                               color: errorColor.withOpacity(0.1),
@@ -951,7 +1204,8 @@ class _CliqueState extends State<Clique> {
 
                       // Section historique
                       Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                        margin: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 16),
                         child: Row(
                           children: [
                             Icon(
@@ -974,30 +1228,32 @@ class _CliqueState extends State<Clique> {
 
                       isLoading
                           ? Container(
-                        padding: const EdgeInsets.only(top: 40, bottom: 80),
-                        child: Column(
-                          children: [
-                            CircularProgressIndicator(color: primaryColor),
-                            const SizedBox(height: 16),
-                            Text(
-                              'Chargement des pointages...',
-                              style: TextStyle(
-                                color: textColor.withOpacity(0.6),
+                              padding:
+                                  const EdgeInsets.only(top: 40, bottom: 80),
+                              child: Column(
+                                children: [
+                                  CircularProgressIndicator(
+                                      color: primaryColor),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'Chargement des pointages...',
+                                    style: TextStyle(
+                                      color: textColor.withOpacity(0.6),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
-                          ],
-                        ),
-                      )
+                            )
                           : (items.isEmpty)
-                          ? _buildEmptyState()
-                          : ListView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: items.length,
-                        itemBuilder: (context, index) {
-                          return _buildPointageCard(items[index]);
-                        },
-                      ),
+                              ? _buildEmptyState()
+                              : ListView.builder(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  itemCount: items.length,
+                                  itemBuilder: (context, index) {
+                                    return _buildPointageCard(items[index]);
+                                  },
+                                ),
 
                       const SizedBox(height: 24),
                     ],
@@ -1037,16 +1293,22 @@ class _WhatsAppScannerPainter extends CustomPainter {
     canvas.drawLine(Offset(0, 0), Offset(cornerLength, 0), cornerPaint);
 
     // Coin supérieur droit
-    canvas.drawLine(Offset(size.width - cornerLength, 0), Offset(size.width, 0), cornerPaint);
-    canvas.drawLine(Offset(size.width, 0), Offset(size.width, cornerLength), cornerPaint);
+    canvas.drawLine(Offset(size.width - cornerLength, 0), Offset(size.width, 0),
+        cornerPaint);
+    canvas.drawLine(
+        Offset(size.width, 0), Offset(size.width, cornerLength), cornerPaint);
 
     // Coin inférieur gauche
-    canvas.drawLine(Offset(0, size.height - cornerLength), Offset(0, size.height), cornerPaint);
-    canvas.drawLine(Offset(0, size.height), Offset(cornerLength, size.height), cornerPaint);
+    canvas.drawLine(Offset(0, size.height - cornerLength),
+        Offset(0, size.height), cornerPaint);
+    canvas.drawLine(
+        Offset(0, size.height), Offset(cornerLength, size.height), cornerPaint);
 
     // Coin inférieur droit
-    canvas.drawLine(Offset(size.width - cornerLength, size.height), Offset(size.width, size.height), cornerPaint);
-    canvas.drawLine(Offset(size.width, size.height - cornerLength), Offset(size.width, size.height), cornerPaint);
+    canvas.drawLine(Offset(size.width - cornerLength, size.height),
+        Offset(size.width, size.height), cornerPaint);
+    canvas.drawLine(Offset(size.width, size.height - cornerLength),
+        Offset(size.width, size.height), cornerPaint);
   }
 
   @override

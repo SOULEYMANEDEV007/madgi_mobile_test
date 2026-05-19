@@ -2,14 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class ContactPage extends StatelessWidget {
-  const ContactPage({Key? key}) : super(key: key);
+
+  static const Color primaryColor = Color(0xFFF77F00);
+  static const Color secondaryColor = Color(0xFF009A44);
+  static const Color backgroundColor = Color(0xFFFFFFFF);
+  static const Color textColor = Color(0xFF2D3748);
+  static const Color lightGray = Color(0xFFF7FAFC);
+  static const Color mediumGray = Color(0xFFE2E8F0);
+
+  const ContactPage({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: lightGray,
       appBar: AppBar(
         title: const Text('Contactez-nous'),
-        backgroundColor: Colors.blue, // Adaptez la couleur à votre thème
+        backgroundColor: backgroundColor,
+        iconTheme: const IconThemeData(color: primaryColor),
+        titleTextStyle: const TextStyle(color: textColor, fontSize: 20, fontWeight: FontWeight.bold),
         elevation: 0,
       ),
       body: SingleChildScrollView(
@@ -46,14 +57,14 @@ class ContactPage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.blue.shade50,
+        color: primaryColor.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         children: [
           Icon(
             Icons.help_outline,
-            color: Colors.blue.shade700,
+            color: primaryColor,
             size: 40,
           ),
           const SizedBox(width: 16),
@@ -66,14 +77,14 @@ class ContactPage extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: Colors.blue.shade800,
+                    color: textColor,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'Nous sommes là pour vous aider',
                   style: TextStyle(
-                    color: Colors.blue.shade600,
+                    color: textColor.withOpacity(0.7),
                   ),
                 ),
               ],
@@ -93,7 +104,7 @@ class ContactPage extends StatelessWidget {
           style: TextStyle(
             fontSize: 22,
             fontWeight: FontWeight.bold,
-            color: Colors.grey.shade800,
+            color: textColor,
           ),
         ),
         const SizedBox(height: 10),
@@ -102,7 +113,7 @@ class ContactPage extends StatelessWidget {
               'suggérer une amélioration ou obtenir de l\'aide technique.',
           style: TextStyle(
             fontSize: 16,
-            color: Colors.grey.shade600,
+            color: textColor.withOpacity(0.6),
             height: 1.5,
           ),
         ),
@@ -119,45 +130,35 @@ class ContactPage extends StatelessWidget {
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: Colors.grey.shade800,
+            color: textColor,
           ),
         ),
         const SizedBox(height: 8),
         Text(
           'Contactez directement nos développeurs',
           style: TextStyle(
-            color: Colors.grey.shade600,
+            color: textColor.withOpacity(0.6),
           ),
         ),
         const SizedBox(height: 20),
 
         // Contact 1
         _buildContactCard(
-          name: 'Jean Dupont',
-          role: 'Lead Développeur',
-          phone: '+33 6 12 34 56 78',
-          email: 'jean.dupont@madgi.com',
-          color: Colors.blue.shade100,
+          name: 'Goh_dev',
+          role: 'Responsable des Devs de CI+ et dev backend',
+          phone: '+225 07 57 72 76 88',
+          email: 'contact@madgi.com',
+          color: secondaryColor.withOpacity(0.15),
         ),
         const SizedBox(height: 16),
 
         // Contact 2
         _buildContactCard(
-          name: 'Marie Martin',
-          role: 'Développeuse Mobile',
-          phone: '+33 6 23 45 67 89',
-          email: 'marie.martin@madgi.com',
-          color: Colors.green.shade100,
-        ),
-        const SizedBox(height: 16),
-
-        // Contact 3
-        _buildContactCard(
-          name: 'Paul Bernard',
-          role: 'Support Technique',
-          phone: '+33 6 34 56 78 90',
-          email: 'paul.bernard@madgi.com',
-          color: Colors.orange.shade100,
+          name: 'Souley_dev',
+          role: 'Stagiaire et dev full stack',
+          phone: '+225 01 51 78 25 66',
+          email: 'contact@madgi.com',
+          color: primaryColor.withOpacity(0.15),
         ),
       ],
     );
@@ -190,7 +191,7 @@ class ContactPage extends StatelessWidget {
                   backgroundColor: Colors.white,
                   child: Icon(
                     Icons.person,
-                    color: Colors.grey.shade700,
+                    color: textColor.withOpacity(0.7),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -208,7 +209,7 @@ class ContactPage extends StatelessWidget {
                       Text(
                         role,
                         style: TextStyle(
-                          color: Colors.grey.shade600,
+                          color: textColor.withOpacity(0.6),
                         ),
                       ),
                     ],
@@ -217,7 +218,7 @@ class ContactPage extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
-            Divider(color: Colors.grey.shade300),
+            Divider(color: mediumGray),
             const SizedBox(height: 12),
 
             // Téléphone
@@ -252,13 +253,13 @@ class ContactPage extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.grey.shade200),
+          border: Border.all(color: mediumGray),
         ),
         child: Row(
           children: [
             Icon(
               icon,
-              color: Colors.blue.shade700,
+              color: primaryColor,
               size: 20,
             ),
             const SizedBox(width: 12),
@@ -266,14 +267,14 @@ class ContactPage extends StatelessWidget {
               child: Text(
                 text,
                 style: TextStyle(
-                  color: Colors.grey.shade800,
+                  color: textColor,
                   fontSize: 15,
                 ),
               ),
             ),
             Icon(
               Icons.arrow_forward_ios,
-              color: Colors.grey.shade400,
+              color: textColor.withOpacity(0.4),
               size: 16,
             ),
           ],
@@ -286,9 +287,9 @@ class ContactPage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.purple.shade50,
+        color: primaryColor.withOpacity(0.05),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.purple.shade100),
+        border: Border.all(color: primaryColor.withOpacity(0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -297,7 +298,7 @@ class ContactPage extends StatelessWidget {
             children: [
               Icon(
                 Icons.support_agent,
-                color: Colors.purple.shade700,
+                color: primaryColor,
                 size: 28,
               ),
               const SizedBox(width: 12),
@@ -306,7 +307,7 @@ class ContactPage extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Colors.purple.shade800,
+                  color: textColor,
                 ),
               ),
             ],
@@ -315,7 +316,7 @@ class ContactPage extends StatelessWidget {
           Text(
             'Pour les problèmes techniques urgents, écrivez-nous directement à :',
             style: TextStyle(
-              color: Colors.grey.shade700,
+              color: textColor.withOpacity(0.7),
             ),
           ),
           const SizedBox(height: 12),
@@ -326,13 +327,13 @@ class ContactPage extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.purple.shade200),
+                border: Border.all(color: primaryColor.withOpacity(0.2)),
               ),
               child: Row(
                 children: [
                   Icon(
                     Icons.mail_outline,
-                    color: Colors.purple.shade700,
+                    color: primaryColor,
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -344,14 +345,14 @@ class ContactPage extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
-                            color: Colors.purple.shade700,
+                            color: primaryColor,
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           'Réponse sous 24h',
                           style: TextStyle(
-                            color: Colors.grey.shade600,
+                            color: textColor.withOpacity(0.6),
                             fontSize: 14,
                           ),
                         ),
@@ -360,7 +361,7 @@ class ContactPage extends StatelessWidget {
                   ),
                   Icon(
                     Icons.open_in_new,
-                    color: Colors.purple.shade400,
+                    color: primaryColor,
                   ),
                 ],
               ),
@@ -370,7 +371,7 @@ class ContactPage extends StatelessWidget {
           Text(
             'Merci de préciser dans votre email :\n• Votre nom/prénom\n• Votre numéro de téléphone\n• Une description détaillée du problème\n• Une capture d\'écran si possible',
             style: TextStyle(
-              color: Colors.grey.shade600,
+              color: textColor.withOpacity(0.6),
               fontSize: 14,
             ),
           ),
@@ -383,14 +384,14 @@ class ContactPage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
+        color: backgroundColor,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         children: [
           Icon(
             Icons.access_time,
-            color: Colors.orange.shade700,
+            color: primaryColor,
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -401,14 +402,14 @@ class ContactPage extends StatelessWidget {
                   'Horaires de support',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: Colors.grey.shade800,
+                    color: textColor,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'Lundi - Vendredi : 9h - 18h\nSamedi : 10h - 14h',
                   style: TextStyle(
-                    color: Colors.grey.shade600,
+                    color: textColor.withOpacity(0.6),
                   ),
                 ),
               ],

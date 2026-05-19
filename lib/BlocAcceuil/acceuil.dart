@@ -4,6 +4,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:madgi_mobile/BlocAcceuil/clique.dart';
 import 'package:madgi_mobile/BlocAcceuil/conger.dart';
 import 'package:madgi_mobile/BlocAcceuil/contact_us.dart';
@@ -29,6 +30,7 @@ class _AccueilState extends State<Accueil> {
   var userInfo;
   List infos = [];
   int quit = 0;
+  Timer? _newsTimer;
 
   // Couleurs officielles ivoiriennes
   static const Color primaryColor = Color(0xFFF77F00); // Orange principal
@@ -72,6 +74,9 @@ class _AccueilState extends State<Accueil> {
       }
 
       final userData = json.decode(userInfoString);
+      setState(() {
+        userInfo = userData['user'];
+      });
       final token = userData['token'];
       final userId = userData['user']['id'];
 
@@ -81,7 +86,8 @@ class _AccueilState extends State<Accueil> {
         'Authorization': 'Bearer $token'
       };
 
-      var request = http.Request('GET', Uri.parse('http://192.168.1.4:8000/api/v1/user-info'));
+      var request =
+          http.Request('GET', Uri.parse('${dotenv.get('API_URL')}/user-info'));
       request.body = json.encode({'user_id': userId});
       request.headers.addAll(headers);
 
@@ -122,7 +128,8 @@ class _AccueilState extends State<Accueil> {
         'Authorization': 'Bearer $token'
       };
 
-      var request = http.Request('GET', Uri.parse('http://192.168.1.4:8000/api/v1/infos'));
+      var request =
+          http.Request('GET', Uri.parse('${dotenv.get('API_URL')}/infos'));
       request.body = json.encode({'user_id': userId});
       request.headers.addAll(headers);
 
@@ -184,6 +191,23 @@ class _AccueilState extends State<Accueil> {
   void initState() {
     super.initState();
     getUserInfo();
+    _startAutoScrollNews();
+  }
+
+  void _startAutoScrollNews() {
+    _newsTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
+      if (_pageController.hasClients) {
+        int nextPage = _currentPage + 1;
+        if (nextPage >= actualites.length) {
+          nextPage = 0;
+        }
+        _pageController.animateToPage(
+          nextPage,
+          duration: const Duration(milliseconds: 800),
+          curve: Curves.easeInOut,
+        );
+      }
+    });
   }
 
   Widget _buildServiceCard({
@@ -212,8 +236,8 @@ class _AccueilState extends State<Accueil> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 56,
-              height: 56,
+              width: 48,
+              height: 48,
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.2),
                 shape: BoxShape.circle,
@@ -224,15 +248,17 @@ class _AccueilState extends State<Accueil> {
                 size: iconSize,
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             Text(
               title,
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 16,
+                fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
               textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -259,6 +285,22 @@ class _AccueilState extends State<Accueil> {
   }
 
   @override
+  void dispose() {
+    _newsTimer?.cancel();
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  String _formatName() {
+    if (userInfo == null) return 'Chargement...';
+    String nom = userInfo['nom']?.toString() ?? '';
+    String prenom = userInfo['prenom']?.toString() ?? '';
+    List<String> prenoms = prenom.trim().split(RegExp(r'\s+')).where((s) => s.isNotEmpty).toList();
+    String premierPrenom = prenoms.isNotEmpty ? prenoms.first : '';
+    return '$nom $premierPrenom'.trim();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: lightGray,
@@ -266,33 +308,15 @@ class _AccueilState extends State<Accueil> {
         backgroundColor: backgroundColor,
         elevation: 0,
         centerTitle: true,
-        title: Column(
-          children: [
-            // Logo de l'application depuis assets
-            Image.asset(
-              'assets/logo_madgi.png', // Remplacez par le nom exact de votre fichier logo
-              height: 35,
-              fit: BoxFit.contain,
-              errorBuilder: (context, error, stackTrace) {
-                // Fallback si l'image n'existe pas
-                return Image.asset(
-                  'assets/logo.jpg',
-                  height: 35,
-                  fit: BoxFit.contain,
-                );
-              },
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'MADGI Mobile',
-              style: TextStyle(
-                color: primaryColor,
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
+        /*title: Text(
+          'MADGI',
+          style: TextStyle(
+            color: primaryColor,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.5,
+          ),
+        ),*/
         leading: Builder(
           builder: (context) => IconButton(
             icon: Icon(
@@ -304,6 +328,42 @@ class _AccueilState extends State<Accueil> {
           ),
         ),
         actions: [
+          if (userInfo != null)
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => ProfileScreen()),
+                );
+              },
+              child: Container(
+                width: 35,
+                height: 35,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: primaryColor.withOpacity(0.1),
+                  border: Border.all(
+                    color: primaryColor.withOpacity(0.3),
+                    width: 1,
+                  ),
+                  image: userInfo['photo'] != null
+                      ? DecorationImage(
+                          image: NetworkImage(
+                              "${dotenv.get('IMAGE_URL')}/${userInfo['photo']}"),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
+                ),
+                child: userInfo['photo'] == null
+                    ? const Icon(
+                        Icons.person,
+                        color: primaryColor,
+                        size: 20,
+                      )
+                    : null,
+              ),
+            ),
+          const SizedBox(width: 4),
           Stack(
             children: [
               IconButton(
@@ -316,7 +376,7 @@ class _AccueilState extends State<Accueil> {
                   child: Icon(
                     Icons.notifications_outlined,
                     color: textColor,
-                    size: 24,
+                    size: 22,
                   ),
                 ),
                 onPressed: () {
@@ -339,14 +399,14 @@ class _AccueilState extends State<Accueil> {
                       color: Color(0xFFE53E3E),
                     ),
                     constraints: const BoxConstraints(
-                      minWidth: 18,
-                      minHeight: 18,
+                      minWidth: 16,
+                      minHeight: 16,
                     ),
                     child: Text(
                       '${infos.length - infos.where((element) => element['info']['userinfos']?['user_id'] == userInfo['id']).toList().length}',
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 10,
+                        fontSize: 9,
                         fontWeight: FontWeight.bold,
                       ),
                       textAlign: TextAlign.center,
@@ -355,7 +415,7 @@ class _AccueilState extends State<Accueil> {
                 ),
             ],
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 12),
         ],
       ),
       drawer: Drawer(
@@ -382,18 +442,19 @@ class _AccueilState extends State<Accueil> {
             children: [
               // Section de bienvenue
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 decoration: BoxDecoration(
                   color: backgroundColor,
                   borderRadius: const BorderRadius.only(
-                    bottomLeft: Radius.circular(24),
-                    bottomRight: Radius.circular(24),
+                    bottomLeft: Radius.circular(20),
+                    bottomRight: Radius.circular(20),
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 20,
-                      offset: const Offset(0, 4),
+                      color: Colors.black.withOpacity(0.03),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
                     ),
                   ],
                 ),
@@ -402,29 +463,6 @@ class _AccueilState extends State<Accueil> {
                   children: [
                     Row(
                       children: [
-                        Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: primaryColor.withOpacity(0.1),
-                            border: Border.all(
-                              color: primaryColor.withOpacity(0.3),
-                              width: 2,
-                            ),
-                          ),
-                          child: userInfo != null && userInfo['photo'] != null
-                              ? CircleAvatar(
-                            backgroundImage: NetworkImage(
-                                'http://192.168.1.4:8000/${userInfo['photo']}'),
-                          )
-                              : Icon(
-                            Icons.person,
-                            color: primaryColor,
-                            size: 24,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -437,11 +475,11 @@ class _AccueilState extends State<Accueil> {
                                 ),
                               ),
                               Text(
-                                userInfo != null ? userInfo['nom'] ?? '' : 'Chargement...',
+                                _formatName(),
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   color: textColor,
-                                  fontSize: 20,
+                                  fontSize: 22,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -465,9 +503,9 @@ class _AccueilState extends State<Accueil> {
               ),
 
               // Section actualités (carousel)
-              const SizedBox(height: 20),
+              const SizedBox(height: 12),
               // ... dans le build method, dans la section Actualités
-              Padding(
+              /*Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -486,7 +524,8 @@ class _AccueilState extends State<Accueil> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const ActualitesCompletesScreen(),
+                            builder: (context) =>
+                                const ActualitesCompletesScreen(),
                           ),
                         );
                       },
@@ -501,10 +540,10 @@ class _AccueilState extends State<Accueil> {
                     ),
                   ],
                 ),
-              ),
+              ),*/
               const SizedBox(height: 10),
               SizedBox(
-                height: 160,
+                height: 140,
                 child: PageView.builder(
                   controller: _pageController,
                   onPageChanged: (int page) {
@@ -538,23 +577,8 @@ class _AccueilState extends State<Accueil> {
                       'Services rapides',
                       style: TextStyle(
                         color: textColor,
-                        fontSize: 18,
+                        fontSize: 17,
                         fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: primaryColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        '4 services',
-                        style: TextStyle(
-                          color: primaryColor,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                        ),
                       ),
                     ),
                   ],
@@ -569,12 +593,12 @@ class _AccueilState extends State<Accueil> {
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: Column(
                       children: [
-                        // Grille de services (2x2)
+                        // Grille de services (2x2) restaurée
                         GridView.count(
                           crossAxisCount: 2,
-                          mainAxisSpacing: 16,
-                          crossAxisSpacing: 16,
-                          childAspectRatio: 1.1,
+                          mainAxisSpacing: 12,
+                          crossAxisSpacing: 12,
+                          childAspectRatio: 1.25,
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
                           children: [
@@ -609,90 +633,31 @@ class _AccueilState extends State<Accueil> {
                               title: 'Pointage\nEmarger',
                               color: primaryColor,
                               onTap: () {
-                                try {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(builder: (context) => const Clique()),
-                                  );
-                                } catch (e) {
-                                  print('❌ Erreur navigation vers Clique: $e');
-                                }
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (context) => const Clique()),
+                                );
                               },
-                              iconSize: 32,
+                              iconSize: 28,
                             ),
                             _buildServiceCard(
                               icon: Icons.contact_emergency,
                               title: 'Contactez Nous',
                               color: const Color(0xFF805AD5),
                               onTap: () {
-                                // Ajouter la navigation vers Contact us
-                                try {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(builder: (context) => const ContactPage()), // ← CORRECT
-                                  );
-                                } catch (e) {
-                                  print('❌ Erreur navigation vers Contact us: $e');
-                                }
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (context) =>
+                                          const ContactPage()),
+                                );
                               },
-                              iconSize: 32,
+                              iconSize: 28,
                             ),
                           ],
                         ),
-
-                        // Espace pour le contenu supplémentaire
-                        const SizedBox(height: 20),
-
-                        // Section informations rapides (optionnelle)
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: backgroundColor,
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.info_outline,
-                                color: primaryColor,
-                                size: 24,
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'À noter',
-                                      style: TextStyle(
-                                        color: textColor,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'Consultez régulièrement les actualités pour rester informé',
-                                      style: TextStyle(
-                                        color: textColor.withOpacity(0.7),
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        const SizedBox(height: 40), // Espace pour la barre de navigation
+                        const SizedBox(height: 16),
                       ],
                     ),
                   ),
@@ -703,74 +668,79 @@ class _AccueilState extends State<Accueil> {
         ),
       ),
       bottomNavigationBar: Container(
-        height: 70,
+        height: MediaQuery.of(context).padding.bottom > 0 ? 85 : 70,
         decoration: BoxDecoration(
-            color: backgroundColor,
-            boxShadow: [
-        BoxShadow(
-        color: Colors.black.withOpacity(0.1),
-        blurRadius: 20,
-        offset: const Offset(0, -2),
+          color: backgroundColor,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 20,
+              offset: const Offset(0, -2),
+            ),
+          ],
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
+        ),
+        child: Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).padding.bottom > 0
+                ? MediaQuery.of(context).padding.bottom
+                : 10,
+            top: 5,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildNavItem(
+                icon: Icons.home_filled,
+                label: 'Accueil',
+                isActive: true,
+              ),
+              _buildNavItem(
+                icon: Icons.beach_access,
+                label: 'Congés',
+                isActive: false,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const Conger(),
+                    ),
+                  );
+                },
+              ),
+              _buildNavItem(
+                icon: Icons.info_outline,
+                label: 'Infos',
+                isActive: false,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const Informations(),
+                    ),
+                  );
+                },
+              ),
+              _buildNavItem(
+                icon: Icons.person_outline,
+                label: 'Profil',
+                isActive: false,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ProfileScreen(),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
       ),
-    ],
-    borderRadius: const BorderRadius.only(
-    topLeft: Radius.circular(20),
-    topRight: Radius.circular(20),
-    ),
-    ),
-    child: Padding(
-    padding: const EdgeInsets.only(bottom: 6),
-    child: Row(
-    mainAxisAlignment: MainAxisAlignment.spaceAround,
-    children: [
-    _buildNavItem(
-    icon: Icons.home_filled,
-    label: 'Accueil',
-    isActive: true,
-    ),
-    _buildNavItem(
-    icon: Icons.beach_access,
-    label: 'Congés',
-    isActive: false,
-    onTap: () {
-    Navigator.push(
-    context,
-    MaterialPageRoute(
-    builder: (context) => const Conger(),
-    ),
-    );
-    },
-    ),
-    _buildNavItem(
-    icon: Icons.info_outline,
-    label: 'Infos',
-    isActive: false,
-    onTap: () {
-    Navigator.push(
-    context,
-    MaterialPageRoute(
-    builder: (context) => const Informations(),
-    ),
-    );
-    },
-    ),
-    _buildNavItem(
-    icon: Icons.person_outline,
-    label: 'Profil',
-    isActive: false,
-    onTap: () {
-    Navigator.push(
-    context,
-    MaterialPageRoute(
-    builder: (context) => ProfileScreen(),
-    ),
-    );
-    },
-    ),
-    ],
-    ),
-    ),
-    ),
     );
   }
 
@@ -860,7 +830,8 @@ class _AccueilState extends State<Accueil> {
                   children: [
                     if (badgeText != null)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         margin: const EdgeInsets.only(bottom: 8),
                         decoration: BoxDecoration(
                           color: primaryColor,
@@ -913,16 +884,19 @@ class _AccueilState extends State<Accueil> {
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+        padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 12),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 36,
-              height: 36,
+              width: 32,
+              height: 32,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: isActive ? primaryColor.withOpacity(0.1) : Colors.transparent,
+                color: isActive
+                    ? primaryColor.withOpacity(0.1)
+                    : Colors.transparent,
               ),
               child: Icon(
                 icon,

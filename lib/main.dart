@@ -8,9 +8,18 @@ import 'connexion.dart';
 import 'inscription.dart';
 import 'password.dart';
 import 'splash_screen.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'dart:io';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await dotenv.load(fileName: ".env");
+    print("✅ .env chargé : API_URL = ${dotenv.env['API_URL']}");
+  } catch (e) {
+    print("❌ Erreur lors du chargement de .env : $e");
+  }
+
   // ⚠️ DÉSACTIVER TEMPORAIREMENT LA VÉRIFICATION SSL POUR LE DÉVELOPPEMENT
   // ⚠️ À ENLEVER ABSOLUMENT AVANT LA PUBLICATION EN PRODUCTION
   HttpOverrides.global = MyHttpOverrides();
@@ -54,7 +63,8 @@ class MyApp extends StatelessWidget {
             borderRadius: BorderRadius.circular(8),
             borderSide: BorderSide.none,
           ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         ),
         textButtonTheme: TextButtonThemeData(
           style: TextButton.styleFrom(

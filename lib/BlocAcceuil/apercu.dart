@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:easy_image_viewer/easy_image_viewer.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:madgi_mobile/BlocAcceuil/informations.dart';
 import 'package:madgi_mobile/BlocAcceuil/notification.dart';
@@ -38,10 +39,14 @@ class _ApercuState extends State<Apercu> {
       var headers = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'Authorization': 'Bearer ${json.decode(prefs.getString('userInfo')!)['token']}'
+        'Authorization':
+            'Bearer ${json.decode(prefs.getString('userInfo')!)['token']}'
       };
-      var request = http.Request('GET', Uri.parse('http://192.168.1.4:8000/api/v1/info/$id'));
-      request.body = json.encode({'user_id': '${json.decode(prefs.getString('userInfo')!)['user']['id']}'});
+      var request =
+          http.Request('GET', Uri.parse('${dotenv.get('API_URL')}/info/$id'));
+      request.body = json.encode({
+        'user_id': '${json.decode(prefs.getString('userInfo')!)['user']['id']}'
+      });
       request.headers.addAll(headers);
       http.StreamedResponse response = await request.send();
       final data = await response.stream.bytesToString();
@@ -58,7 +63,8 @@ class _ApercuState extends State<Apercu> {
       await requestStoragePermission();
       Directory? downloadDir = await getDownloadDirectory();
       if (downloadDir == null) {
-        throw Exception('Impossible d\'accéder au répertoire de téléchargement');
+        throw Exception(
+            'Impossible d\'accéder au répertoire de téléchargement');
       }
 
       String downloadPath = downloadDir.path;
@@ -70,7 +76,8 @@ class _ApercuState extends State<Apercu> {
       final fullFileName = '$cleanFileName$fileExtension';
 
       await dio.download(url, '$downloadPath/$fullFileName');
-      _showSuccessDialog('Fichier téléchargé avec succès', 'Vérifiez votre dossier de téléchargements');
+      _showSuccessDialog('Fichier téléchargé avec succès',
+          'Vérifiez votre dossier de téléchargements');
     } catch (e) {
       print('❌ Erreur téléchargement: $e');
       _showErrorDialog('Erreur lors du téléchargement');
@@ -81,7 +88,7 @@ class _ApercuState extends State<Apercu> {
 
   Widget _buildFilePreview(String filePath) {
     String extension = p.extension(filePath).toLowerCase();
-    final fullUrl = "http://192.168.1.4:8000/$filePath";
+    final fullUrl = "${dotenv.get('IMAGE_URL')}/$filePath";
 
     if (extension == '.pdf') {
       return Container(
@@ -120,38 +127,40 @@ class _ApercuState extends State<Apercu> {
             ElevatedButton(
               onPressed: _isDownloading
                   ? null
-                  : () => downloadFile(fullUrl, 'Document_${widget.data['info']['title'] ?? 'MADGI'}'),
+                  : () => downloadFile(fullUrl,
+                      'Document_${widget.data['info']['title'] ?? 'MADGI'}'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryColor,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
               child: _isDownloading
                   ? SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
-              )
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
                   : Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.download, color: Colors.white, size: 18),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Télécharger',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.download, color: Colors.white, size: 18),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Télécharger',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
             ),
           ],
         ),
@@ -163,7 +172,9 @@ class _ApercuState extends State<Apercu> {
           children: [
             GestureDetector(
               onTap: () {
-                showImageViewer(context, Image.network(fullUrl).image,
+                showImageViewer(
+                  context,
+                  Image.network(fullUrl).image,
                   backgroundColor: Colors.black,
                   onViewerDismissed: () {},
                 );
@@ -194,7 +205,7 @@ class _ApercuState extends State<Apercu> {
                           child: CircularProgressIndicator(
                             value: loadingProgress.expectedTotalBytes != null
                                 ? loadingProgress.cumulativeBytesLoaded /
-                                loadingProgress.expectedTotalBytes!
+                                    loadingProgress.expectedTotalBytes!
                                 : null,
                             color: primaryColor,
                           ),
@@ -232,9 +243,11 @@ class _ApercuState extends State<Apercu> {
             OutlinedButton(
               onPressed: _isDownloading
                   ? null
-                  : () => downloadFile(fullUrl, 'Image_${widget.data['info']['title'] ?? 'MADGI'}'),
+                  : () => downloadFile(fullUrl,
+                      'Image_${widget.data['info']['title'] ?? 'MADGI'}'),
               style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
@@ -242,28 +255,28 @@ class _ApercuState extends State<Apercu> {
               ),
               child: _isDownloading
                   ? SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
-                ),
-              )
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+                      ),
+                    )
                   : Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.download, color: primaryColor, size: 18),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Télécharger l\'image',
-                    style: TextStyle(
-                      color: primaryColor,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.download, color: primaryColor, size: 18),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Télécharger l\'image',
+                          style: TextStyle(
+                            color: primaryColor,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
             ),
           ],
         ),
@@ -305,31 +318,33 @@ class _ApercuState extends State<Apercu> {
             ElevatedButton(
               onPressed: _isDownloading
                   ? null
-                  : () => downloadFile(fullUrl, 'Fichier_${widget.data['info']['title'] ?? 'MADGI'}'),
+                  : () => downloadFile(fullUrl,
+                      'Fichier_${widget.data['info']['title'] ?? 'MADGI'}'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryColor,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
               child: _isDownloading
                   ? SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
-              )
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
                   : Text(
-                'Télécharger le fichier',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
+                      'Télécharger le fichier',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
             ),
           ],
         ),
@@ -659,9 +674,11 @@ class _ApercuState extends State<Apercu> {
                     ),
 
                     // Fichier joint
-                    if (widget.data['media'] != null && widget.data['media']['src'] != null)
+                    if (widget.data['media'] != null &&
+                        widget.data['media']['src'] != null)
                       Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        margin: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 12),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -689,7 +706,8 @@ class _ApercuState extends State<Apercu> {
                                 ],
                               ),
                               child: Center(
-                                child: _buildFilePreview(widget.data['media']['src']),
+                                child: _buildFilePreview(
+                                    widget.data['media']['src']),
                               ),
                             ),
                           ],
@@ -698,7 +716,8 @@ class _ApercuState extends State<Apercu> {
 
                     // Informations émetteur
                     Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      margin: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -729,12 +748,14 @@ class _ApercuState extends State<Apercu> {
                               children: [
                                 _buildInfoItem(
                                   'Nom & prénom:',
-                                  widget.data['info']['post_name'] ?? 'Non spécifié',
+                                  widget.data['info']['post_name'] ??
+                                      'Non spécifié',
                                 ),
                                 const Divider(color: mediumGray, height: 20),
                                 _buildInfoItem(
                                   'Téléphone:',
-                                  widget.data['info']['post_phone'] ?? 'Non spécifié',
+                                  widget.data['info']['post_phone'] ??
+                                      'Non spécifié',
                                 ),
                                 const Divider(color: mediumGray, height: 20),
                                 _buildInfoItem(

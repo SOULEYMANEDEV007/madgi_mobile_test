@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:madgi_mobile/BlocAcceuil/acceuil.dart';
 import 'package:madgi_mobile/password.dart';
 import 'package:madgi_mobile/inscription.dart';
@@ -26,8 +27,10 @@ class _ConnexionState extends State<Connexion> {
   static const Color errorColor = Color(0xFFE53E3E);
   static const Color successColor = Color(0xFF38A169);
 
-  final TextEditingController usernameTextEditingController = TextEditingController();
-  final TextEditingController motdepasseTextEditingController = TextEditingController();
+  final TextEditingController usernameTextEditingController =
+      TextEditingController();
+  final TextEditingController motdepasseTextEditingController =
+      TextEditingController();
 
   bool _obscureText = true;
   bool _rememberMe = false;
@@ -135,19 +138,18 @@ class _ConnexionState extends State<Connexion> {
     });
 
     try {
-      final url = Uri.parse('http://192.168.01.4:8000/api/v1/connexion');
+      final url = Uri.parse('${dotenv.get('API_URL')}/connexion');
 
-      final response = await http.post(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: json.encode({
-          "email": username,
-          "password": password
-        }),
-      ).timeout(const Duration(seconds: 30));
+      final response = await http
+          .post(
+            url,
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+            body: json.encode({"email": username, "password": password}),
+          )
+          .timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
         final decode = json.decode(response.body);
@@ -333,7 +335,7 @@ class _ConnexionState extends State<Connexion> {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(60), // Pour un logo rond
                 child: Image.asset(
-                  'assets/images.jpg', // Chemin vers votre logo
+                  'assets/logo.png', // Chemin vers votre logo
                   fit: BoxFit.contain,
                   width: 100,
                   height: 100,
@@ -395,7 +397,9 @@ class _ConnexionState extends State<Connexion> {
                 ],
               ),
               child: TextField(
-                controller: isPassword ? motdepasseTextEditingController : usernameTextEditingController,
+                controller: isPassword
+                    ? motdepasseTextEditingController
+                    : usernameTextEditingController,
                 obscureText: isPassword && _obscureText,
                 enabled: !_isLoading,
                 style: TextStyle(color: textColor),
@@ -416,18 +420,24 @@ class _ConnexionState extends State<Connexion> {
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(color: primaryColor, width: 2),
                   ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   suffixIcon: isPassword
                       ? IconButton(
-                    icon: Icon(
-                      _obscureText ? Icons.visibility_off : Icons.visibility,
-                      color: mediumGray,
-                    ),
-                    onPressed: _isLoading ? null : _togglePasswordVisibility,
-                  )
+                          icon: Icon(
+                            _obscureText
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                            color: mediumGray,
+                          ),
+                          onPressed:
+                              _isLoading ? null : _togglePasswordVisibility,
+                        )
                       : null,
                 ),
-                keyboardType: isPassword ? TextInputType.visiblePassword : TextInputType.emailAddress,
+                keyboardType: isPassword
+                    ? TextInputType.visiblePassword
+                    : TextInputType.emailAddress,
               ),
             ),
           ],
@@ -459,21 +469,21 @@ class _ConnexionState extends State<Connexion> {
             ),
             child: _isLoading
                 ? SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-              ),
-            )
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
                 : Text(
-              'Se connecter',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+                    'Se connecter',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
           ),
         ),
       ),
@@ -524,11 +534,12 @@ class _ConnexionState extends State<Connexion> {
               onTap: _isLoading
                   ? null
                   : () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const Password()),
-                );
-              },
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const Password()),
+                      );
+                    },
               child: Text(
                 'Mot de passe oublié ?',
                 style: TextStyle(
@@ -612,12 +623,13 @@ class _ConnexionState extends State<Connexion> {
                   ),
                   child: Column(
                     children: [
-                      _buildTextField('Adresse email', 'exemple@email.com', isPassword: false),
+                      _buildTextField('Adresse email', 'exemple@email.com',
+                          isPassword: false),
                       const SizedBox(height: 16),
-                      _buildTextField('Mot de passe', 'Saisissez votre mot de passe', isPassword: true),
-
+                      _buildTextField(
+                          'Mot de passe', 'Saisissez votre mot de passe',
+                          isPassword: true),
                       _buildOptionsRow(),
-
                       _buildLoginButton(),
                     ],
                   ),
@@ -626,6 +638,15 @@ class _ConnexionState extends State<Connexion> {
                 _buildRegisterLink(),
 
                 const SizedBox(height: 40),
+                Text(
+                  'Version 1.0.0',
+                  style: TextStyle(
+                    color: textColor.withOpacity(0.5),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 20),
               ],
             ),
           ),

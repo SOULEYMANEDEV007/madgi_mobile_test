@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:madgi_mobile/BlocAcceuil/acceuil.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
@@ -24,17 +25,22 @@ class _FormulaireState extends State<Formulaire> {
   static const Color mediumGray = Color(0xFFE2E8F0);
   static const Color errorColor = Color(0xFFE53E3E);
 
-  TextEditingController nomprenomTextEditingController = TextEditingController();
-  TextEditingController matriculeTextEditingController = TextEditingController();
-  TextEditingController departementTextEditingController = TextEditingController();
+  TextEditingController nomprenomTextEditingController =
+      TextEditingController();
+  TextEditingController matriculeTextEditingController =
+      TextEditingController();
+  TextEditingController departementTextEditingController =
+      TextEditingController();
   TextEditingController serviceTextEditingController = TextEditingController();
-  TextEditingController datedebutTextEditingController = TextEditingController();
+  TextEditingController datedebutTextEditingController =
+      TextEditingController();
   TextEditingController datefinTextEditingController = TextEditingController();
   TextEditingController lieuTextEditingController = TextEditingController();
   TextEditingController callUser = TextEditingController();
   TextEditingController interim = TextEditingController();
   TextEditingController contactTextEditingController = TextEditingController();
-  TextEditingController motdepasseTextEditingController = TextEditingController();
+  TextEditingController motdepasseTextEditingController =
+      TextEditingController();
 
   bool _obscureText = true;
   bool _isLoading = false;
@@ -49,19 +55,24 @@ class _FormulaireState extends State<Formulaire> {
     var headers = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      'Authorization': 'Bearer ${json.decode(prefs.getString('userInfo')!)['token']}'
+      'Authorization':
+          'Bearer ${json.decode(prefs.getString('userInfo')!)['token']}'
     };
-    var request = http.Request('GET', Uri.parse('http://192.168.1.4:8000/api/v1/user-info'));
-    request.body = json.encode({'user_id': '${json.decode(prefs.getString('userInfo')!)['user']['id']}'});
+    var request =
+        http.Request('GET', Uri.parse('${dotenv.get('API_URL')}/user-info'));
+    request.body = json.encode({
+      'user_id': '${json.decode(prefs.getString('userInfo')!)['user']['id']}'
+    });
     request.headers.addAll(headers);
     http.StreamedResponse response = await request.send();
     final data = await response.stream.bytesToString();
     final decode = json.decode(data);
-    if (decode['success']) setState(() {
-      userInfo = decode['data']['user'];
-      nomprenomTextEditingController.text = userInfo['nom'];
-      matriculeTextEditingController.text = userInfo['matricule'];
-    });
+    if (decode['success'])
+      setState(() {
+        userInfo = decode['data']['user'];
+        nomprenomTextEditingController.text = userInfo['nom'];
+        matriculeTextEditingController.text = userInfo['matricule'];
+      });
   }
 
   Future getDepartments() async {
@@ -69,10 +80,14 @@ class _FormulaireState extends State<Formulaire> {
     var headers = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      'Authorization': 'Bearer ${json.decode(prefs.getString('userInfo')!)['token']}'
+      'Authorization':
+          'Bearer ${json.decode(prefs.getString('userInfo')!)['token']}'
     };
-    var request = http.Request('GET', Uri.parse('http://192.168.1.4:8000/api/v1/departments'));
-    request.body = json.encode({'user_id': '${json.decode(prefs.getString('userInfo')!)['user']['id']}'});
+    var request = http.Request(
+        'GET', Uri.parse('${dotenv.get('API_URL')}/departments'));
+    request.body = json.encode({
+      'user_id': '${json.decode(prefs.getString('userInfo')!)['user']['id']}'
+    });
     request.headers.addAll(headers);
     http.StreamedResponse response = await request.send();
     final data = await response.stream.bytesToString();
@@ -85,10 +100,14 @@ class _FormulaireState extends State<Formulaire> {
     var headers = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      'Authorization': 'Bearer ${json.decode(prefs.getString('userInfo')!)['token']}'
+      'Authorization':
+          'Bearer ${json.decode(prefs.getString('userInfo')!)['token']}'
     };
-    var request = http.Request('GET', Uri.parse('http://192.168.1.4:8000/api/v1/services'));
-    request.body = json.encode({'user_id': '${json.decode(prefs.getString('userInfo')!)['user']['id']}'});
+    var request =
+        http.Request('GET', Uri.parse('${dotenv.get('API_URL')}/services'));
+    request.body = json.encode({
+      'user_id': '${json.decode(prefs.getString('userInfo')!)['user']['id']}'
+    });
     request.headers.addAll(headers);
     http.StreamedResponse response = await request.send();
     final data = await response.stream.bytesToString();
@@ -157,7 +176,9 @@ class _FormulaireState extends State<Formulaire> {
     );
   }
 
-  Widget _buildTextField(String label, String hint, TextEditingController controller, {bool isPassword = false, bool enabled = true}) {
+  Widget _buildTextField(
+      String label, String hint, TextEditingController controller,
+      {bool isPassword = false, bool enabled = true}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -172,7 +193,8 @@ class _FormulaireState extends State<Formulaire> {
         const SizedBox(height: 8),
         Container(
           constraints: BoxConstraints(
-            maxWidth: MediaQuery.of(context).size.width - 48, // 24 padding de chaque côté
+            maxWidth: MediaQuery.of(context).size.width -
+                48, // 24 padding de chaque côté
           ),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
@@ -188,7 +210,9 @@ class _FormulaireState extends State<Formulaire> {
             controller: controller,
             enabled: enabled,
             obscureText: isPassword && _obscureText,
-            keyboardType: label.contains('Téléphone') ? TextInputType.phone : TextInputType.text,
+            keyboardType: label.contains('Téléphone')
+                ? TextInputType.phone
+                : TextInputType.text,
             style: TextStyle(color: textColor),
             decoration: InputDecoration(
               filled: true,
@@ -207,15 +231,16 @@ class _FormulaireState extends State<Formulaire> {
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(color: primaryColor, width: 2),
               ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               suffixIcon: isPassword
                   ? IconButton(
-                icon: Icon(
-                  _obscureText ? Icons.visibility_off : Icons.visibility,
-                  color: mediumGray,
-                ),
-                onPressed: _togglePasswordVisibility,
-              )
+                      icon: Icon(
+                        _obscureText ? Icons.visibility_off : Icons.visibility,
+                        color: mediumGray,
+                      ),
+                      onPressed: _togglePasswordVisibility,
+                    )
                   : null,
             ),
           ),
@@ -224,7 +249,8 @@ class _FormulaireState extends State<Formulaire> {
     );
   }
 
-  Widget _buildDropdownField(String label, TextEditingController controller, List items) {
+  Widget _buildDropdownField(
+      String label, TextEditingController controller, List items) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -239,7 +265,8 @@ class _FormulaireState extends State<Formulaire> {
         const SizedBox(height: 8),
         Container(
           constraints: BoxConstraints(
-            maxWidth: MediaQuery.of(context).size.width - 48, // 24 padding de chaque côté
+            maxWidth: MediaQuery.of(context).size.width -
+                48, // 24 padding de chaque côté
           ),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
@@ -258,7 +285,8 @@ class _FormulaireState extends State<Formulaire> {
                 value: value['name'],
                 child: Container(
                   constraints: BoxConstraints(
-                    maxWidth: MediaQuery.of(context).size.width - 100, // Contrainte pour le texte
+                    maxWidth: MediaQuery.of(context).size.width -
+                        100, // Contrainte pour le texte
                   ),
                   child: Text(
                     value['name'],
@@ -276,7 +304,7 @@ class _FormulaireState extends State<Formulaire> {
               if (newValue != null) {
                 controller.text = newValue;
                 final result = items.firstWhere(
-                      (element) => element['name'] == newValue,
+                  (element) => element['name'] == newValue,
                   orElse: () => {'id': -1},
                 );
                 if (result['id'] != -1) {
@@ -303,7 +331,8 @@ class _FormulaireState extends State<Formulaire> {
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(color: primaryColor, width: 2),
               ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               hintText: 'Sélectionnez un $label',
               hintStyle: TextStyle(
                 color: mediumGray,
@@ -323,7 +352,8 @@ class _FormulaireState extends State<Formulaire> {
     );
   }
 
-  Widget _buildDateField(String label, String hint, TextEditingController controller) {
+  Widget _buildDateField(
+      String label, String hint, TextEditingController controller) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -374,7 +404,8 @@ class _FormulaireState extends State<Formulaire> {
               );
               if (pickedDate != null) {
                 setState(() {
-                  controller.text = "${pickedDate.day}/${pickedDate.month}/${pickedDate.year}";
+                  controller.text =
+                      "${pickedDate.day}/${pickedDate.month}/${pickedDate.year}";
                 });
               }
             },
@@ -396,7 +427,8 @@ class _FormulaireState extends State<Formulaire> {
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(color: primaryColor, width: 2),
               ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               suffixIcon: Icon(Icons.calendar_today, color: primaryColor),
             ),
           ),
@@ -595,10 +627,12 @@ class _FormulaireState extends State<Formulaire> {
       var headers = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'Authorization': 'Bearer ${json.decode(prefs.getString('userInfo')!)['token']}'
+        'Authorization':
+            'Bearer ${json.decode(prefs.getString('userInfo')!)['token']}'
       };
 
-      var request = http.Request('POST', Uri.parse('http://192.168.1.4:8000/api/v1/leaves'));
+      var request =
+          http.Request('POST', Uri.parse('${dotenv.get('API_URL')}/leaves'));
       request.body = json.encode({
         "fullname": nomprenom,
         "matricule": matricule,
@@ -642,7 +676,8 @@ class _FormulaireState extends State<Formulaire> {
             _buildHeader(),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -666,8 +701,11 @@ class _FormulaireState extends State<Formulaire> {
                       constraints: BoxConstraints(
                         maxWidth: MediaQuery.of(context).size.width - 48,
                       ),
-                      child: _buildTextField('Nom et prénom', 'Saisissez votre nom complet',
-                          nomprenomTextEditingController, enabled: false),
+                      child: _buildTextField(
+                          'Nom et prénom',
+                          'Saisissez votre nom complet',
+                          nomprenomTextEditingController,
+                          enabled: false),
                     ),
                     const SizedBox(height: 16),
 
@@ -676,7 +714,8 @@ class _FormulaireState extends State<Formulaire> {
                         maxWidth: MediaQuery.of(context).size.width - 48,
                       ),
                       child: _buildTextField('Matricule', 'Votre matricule',
-                          matriculeTextEditingController, enabled: false),
+                          matriculeTextEditingController,
+                          enabled: false),
                     ),
                     const SizedBox(height: 16),
 
@@ -684,7 +723,8 @@ class _FormulaireState extends State<Formulaire> {
                       constraints: BoxConstraints(
                         maxWidth: MediaQuery.of(context).size.width - 48,
                       ),
-                      child: _buildDropdownField('Département', departementTextEditingController, _departements),
+                      child: _buildDropdownField('Département',
+                          departementTextEditingController, _departements),
                     ),
                     const SizedBox(height: 16),
 
@@ -692,7 +732,8 @@ class _FormulaireState extends State<Formulaire> {
                       constraints: BoxConstraints(
                         maxWidth: MediaQuery.of(context).size.width - 48,
                       ),
-                      child: _buildDropdownField('Service', serviceTextEditingController, _services),
+                      child: _buildDropdownField(
+                          'Service', serviceTextEditingController, _services),
                     ),
 
                     const SizedBox(height: 24),
@@ -729,18 +770,24 @@ class _FormulaireState extends State<Formulaire> {
                           Expanded(
                             child: Container(
                               constraints: BoxConstraints(
-                                maxWidth: (MediaQuery.of(context).size.width - 88) / 2, // 48 + 16 + 24 padding
+                                maxWidth:
+                                    (MediaQuery.of(context).size.width - 88) /
+                                        2, // 48 + 16 + 24 padding
                               ),
-                              child: _buildDateField('Date de début', 'JJ/MM/AAAA', datedebutTextEditingController),
+                              child: _buildDateField('Date de début',
+                                  'JJ/MM/AAAA', datedebutTextEditingController),
                             ),
                           ),
                           const SizedBox(width: 16),
                           Expanded(
                             child: Container(
                               constraints: BoxConstraints(
-                                maxWidth: (MediaQuery.of(context).size.width - 88) / 2,
+                                maxWidth:
+                                    (MediaQuery.of(context).size.width - 88) /
+                                        2,
                               ),
-                              child: _buildDateField('Date de fin', 'JJ/MM/AAAA', datefinTextEditingController),
+                              child: _buildDateField('Date de fin',
+                                  'JJ/MM/AAAA', datefinTextEditingController),
                             ),
                           ),
                         ],
@@ -752,7 +799,8 @@ class _FormulaireState extends State<Formulaire> {
                       constraints: BoxConstraints(
                         maxWidth: MediaQuery.of(context).size.width - 48,
                       ),
-                      child: _buildTextField('Lieu de jouissance', 'Saisissez le lieu', lieuTextEditingController),
+                      child: _buildTextField('Lieu de jouissance',
+                          'Saisissez le lieu', lieuTextEditingController),
                     ),
                     const SizedBox(height: 16),
 
@@ -760,7 +808,8 @@ class _FormulaireState extends State<Formulaire> {
                       constraints: BoxConstraints(
                         maxWidth: MediaQuery.of(context).size.width - 48,
                       ),
-                      child: _buildTextField('Personne à contacter', 'Nom de la personne', callUser),
+                      child: _buildTextField('Personne à contacter',
+                          'Nom de la personne', callUser),
                     ),
                     const SizedBox(height: 16),
 
@@ -768,7 +817,8 @@ class _FormulaireState extends State<Formulaire> {
                       constraints: BoxConstraints(
                         maxWidth: MediaQuery.of(context).size.width - 48,
                       ),
-                      child: _buildTextField('Téléphone à contacter', 'Numéro de téléphone', contactTextEditingController),
+                      child: _buildTextField('Téléphone à contacter',
+                          'Numéro de téléphone', contactTextEditingController),
                     ),
                     const SizedBox(height: 16),
 
@@ -776,7 +826,8 @@ class _FormulaireState extends State<Formulaire> {
                       constraints: BoxConstraints(
                         maxWidth: MediaQuery.of(context).size.width - 48,
                       ),
-                      child: _buildTextField('Intérim', 'Nom de l\'intérimaire', interim),
+                      child: _buildTextField(
+                          'Intérim', 'Nom de l\'intérimaire', interim),
                     ),
                     const SizedBox(height: 32),
 
@@ -799,28 +850,30 @@ class _FormulaireState extends State<Formulaire> {
                           ),
                           child: _isLoading
                               ? SizedBox(
-                            height: 24,
-                            width: 24,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                            ),
-                          )
+                                  height: 24,
+                                  width: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white),
+                                  ),
+                                )
                               : Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.send, color: Colors.white, size: 20),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Envoyer ma demande',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.send,
+                                        color: Colors.white, size: 20),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Envoyer ma demande',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                            ],
-                          ),
                         ),
                       ),
                     ),

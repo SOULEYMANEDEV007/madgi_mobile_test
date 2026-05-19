@@ -1,0 +1,15 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "madgi_mobile_test (Flutter SM A055F)",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "Flutter",
+            "request": "launch",
+            "type": "dart"
+        }
+    ]
+}

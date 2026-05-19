@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -81,7 +82,7 @@ class _ResultatState extends State<Resultat> {
 
       final userRequest = http.Request(
         'GET',
-        Uri.parse('https://rh.madgi.ci/api/v1/user-info'),
+        Uri.parse('${dotenv.get('API_URL')}/user-info'),
       );
 
       userRequest.body = json.encode({
@@ -124,7 +125,7 @@ class _ResultatState extends State<Resultat> {
 
       final request = http.Request(
         'POST',
-        Uri.parse('https://rh.madgi.ci/api/v1/register'),
+        Uri.parse('${dotenv.get('API_URL')}/register'),
       );
 
       request.body = json.encode({

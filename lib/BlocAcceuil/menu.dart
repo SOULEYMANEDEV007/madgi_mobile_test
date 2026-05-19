@@ -1,11 +1,12 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:madgi_mobile/BlocAcceuil/clique.dart';
 import 'package:madgi_mobile/BlocAcceuil/conger.dart';
 import 'package:madgi_mobile/BlocAcceuil/profilscreen.dart';
-import 'package:madgi_mobile/BlocAcceuil/scane.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../Acceuil.dart';
+import 'package:madgi_mobile/BlocAcceuil/actualites_completes.dart';
 import 'acceuil.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 
 class Menu extends StatefulWidget {
@@ -46,9 +47,7 @@ class _MenuState extends State<Menu> {
 
           // 🔥 Changement ici : route logout conservant la même logique
           var request = http.Request(
-              'POST',
-              Uri.parse('http://192.168.1.4:8000/api/v1/logout')
-          );
+              'POST', Uri.parse('${dotenv.get('API_URL')}/logout'));
 
           request.headers.addAll(headers);
           http.StreamedResponse response = await request.send();
@@ -59,7 +58,7 @@ class _MenuState extends State<Menu> {
               Navigator.pushNamedAndRemoveUntil(
                 context,
                 '/connecter',
-                    (route) => false,
+                (route) => false,
               );
             }
           } else {
@@ -215,7 +214,8 @@ class _MenuState extends State<Menu> {
                   ),
                   child: Icon(
                     icon,
-                    color: isSelected ? Colors.white : textColor.withOpacity(0.7),
+                    color:
+                        isSelected ? Colors.white : textColor.withOpacity(0.7),
                     size: 20,
                   ),
                 ),
@@ -226,7 +226,8 @@ class _MenuState extends State<Menu> {
                     style: TextStyle(
                       color: textColor,
                       fontSize: 16,
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                      fontWeight:
+                          isSelected ? FontWeight.w600 : FontWeight.w500,
                     ),
                   ),
                 ),
@@ -276,7 +277,7 @@ class _MenuState extends State<Menu> {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(12),
                       image: const DecorationImage(
-                        image: AssetImage("assets/logo.jpg"),
+                        image: AssetImage("assets/logo.png"),
                         fit: BoxFit.cover,
                       ),
                     ),
@@ -316,8 +317,7 @@ class _MenuState extends State<Menu> {
                 ],
               ),
             ),
-
-            Padding(
+            /*Padding(
               padding: const EdgeInsets.only(top: 24, left: 24, bottom: 8),
               child: Text(
                 "Navigation",
@@ -327,8 +327,7 @@ class _MenuState extends State<Menu> {
                   fontWeight: FontWeight.w500,
                 ),
               ),
-            ),
-
+            ),*/
             Expanded(
               child: SingleChildScrollView(
                 child: Column(
@@ -346,7 +345,6 @@ class _MenuState extends State<Menu> {
                       },
                       isSelected: true,
                     ),
-
                     _buildMenuItem(
                       icon: Icons.qr_code_scanner,
                       title: 'Emargement',
@@ -354,12 +352,11 @@ class _MenuState extends State<Menu> {
                         Navigator.pushReplacement(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => Accueil(),
+                            builder: (context) => const Clique(),
                           ),
                         );
                       },
                     ),
-
                     _buildMenuItem(
                       icon: Icons.event_note,
                       title: 'Congés & Absences',
@@ -372,19 +369,29 @@ class _MenuState extends State<Menu> {
                         );
                       },
                     ),
-
                     const SizedBox(height: 8),
-
-                    Padding(
+                    _buildMenuItem(
+                      icon: Icons.newspaper,
+                      title: 'Actualités',
+                      onTap: () {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ActualitesCompletesScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    /*Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 24),
                       child: Divider(
                         color: mediumGray,
                         thickness: 1,
                       ),
-                    ),
-
-                    Padding(
-                      padding: const EdgeInsets.only(top: 24, left: 24, bottom: 8),
+                    ),*/
+                    /*Padding(
+                      padding:
+                          const EdgeInsets.only(top: 24, left: 24, bottom: 8),
                       child: Text(
                         "Mon compte",
                         style: TextStyle(
@@ -393,8 +400,7 @@ class _MenuState extends State<Menu> {
                           fontWeight: FontWeight.w500,
                         ),
                       ),
-                    ),
-
+                    ),*/
                     _buildMenuItem(
                       icon: Icons.person_outline,
                       title: 'Profil',
@@ -407,13 +413,11 @@ class _MenuState extends State<Menu> {
                         );
                       },
                     ),
-
                     const SizedBox(height: 16),
                   ],
                 ),
               ),
             ),
-
             Padding(
               padding: const EdgeInsets.all(24),
               child: Container(
@@ -429,7 +433,8 @@ class _MenuState extends State<Menu> {
                     onTap: _logout,
                     borderRadius: BorderRadius.circular(16),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 16, horizontal: 24),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -454,7 +459,6 @@ class _MenuState extends State<Menu> {
                 ),
               ),
             ),
-
             Padding(
               padding: const EdgeInsets.only(bottom: 20),
               child: Center(

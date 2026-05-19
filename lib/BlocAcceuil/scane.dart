@@ -4,6 +4,7 @@ import 'dart:math';
 import 'dart:ui';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:madgi_mobile/BlocAcceuil/acceuil.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -41,6 +42,7 @@ class _ScaneState extends State<Scane> with SingleTickerProviderStateMixin {
   String? _userMatricule;
   String? _userId;
   String? _userPrenom;
+  String? _userToken;
   TextEditingController _justificatifController = TextEditingController();
 
   // Animation controller pour les pop-ups
@@ -146,6 +148,7 @@ class _ScaneState extends State<Scane> with SingleTickerProviderStateMixin {
         _userMatricule = userInfo['user']['matricule']?.toString();
         _userId = userInfo['user']['id']?.toString();
         _userPrenom = userInfo['user']['prenom']?.toString();
+        _userToken = userInfo['token']?.toString();
       });
       _log('Matricule utilisateur chargé: $_userMatricule', level: 'SUCCESS');
       _log('ID utilisateur chargé: $_userId', level: 'SUCCESS');
@@ -355,7 +358,7 @@ class _ScaneState extends State<Scane> with SingleTickerProviderStateMixin {
                           children: [
                             CircularProgressIndicator(
                               valueColor:
-                              AlwaysStoppedAnimation<Color>(primaryColor),
+                                  AlwaysStoppedAnimation<Color>(primaryColor),
                               strokeWidth: 3,
                             ),
                             Icon(
@@ -534,6 +537,12 @@ class _ScaneState extends State<Scane> with SingleTickerProviderStateMixin {
     _log('QR Code détecté!', level: 'SCAN');
     _log('Valeur brute: ${barcode.rawValue}', level: 'DEBUG');
 
+    if (widget.back) {
+      _log('Mode retour actif, renvoi immédiat de la valeur brute', level: 'INFO');
+      Navigator.of(context).pop(barcode.rawValue);
+      return;
+    }
+
     try {
       isScanning = true;
       setState(() => _isLoading = true);
@@ -579,7 +588,8 @@ class _ScaneState extends State<Scane> with SingleTickerProviderStateMixin {
       _log('Matricules autorisés: $allowedMatricules', level: 'DEBUG');
 
       final userMatriculeClean = _userMatricule!.trim();
-      _log('Matricule utilisateur nettoyé: "$userMatriculeClean"', level: 'DEBUG');
+      _log('Matricule utilisateur nettoyé: "$userMatriculeClean"',
+          level: 'DEBUG');
 
       bool isAuthorized = false;
       for (var mat in allowedMatricules) {
@@ -599,7 +609,6 @@ class _ScaneState extends State<Scane> with SingleTickerProviderStateMixin {
 
       // Envoyer le pointage à l'API (sans justificatif)
       await _sendPointageToAPI(userMatriculeClean, null);
-
     } catch (e) {
       _log('Erreur traitement QR: $e', level: 'ERROR');
       _log('Stack trace: ${e.toString()}', level: 'ERROR');
@@ -620,10 +629,13 @@ class _ScaneState extends State<Scane> with SingleTickerProviderStateMixin {
     }
   }
 
-  Future<void> _sendPointageToAPI(String matricule, String? justificatif) async {
-    _log('Envoi pointage à l\'API... ${justificatif != null ? "avec justificatif" : "sans justificatif"}', level: 'INFO');
+  Future<void> _sendPointageToAPI(
+      String matricule, String? justificatif) async {
+    _log(
+        'Envoi pointage à l\'API... ${justificatif != null ? "avec justificatif" : "sans justificatif"}',
+        level: 'INFO');
 
-    final url = 'http://192.168.1.4:8000/api/v1/scan-emargement';
+    final url = '${dotenv.get('API_URL')}/scan-emargement';
     _log('URL API: $url', level: 'DEBUG');
 
     final Map<String, dynamic> requestData = {
@@ -638,14 +650,22 @@ class _ScaneState extends State<Scane> with SingleTickerProviderStateMixin {
 
     try {
       final startTime = DateTime.now();
-      final response = await http.post(
-        Uri.parse(url),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: json.encode(requestData),
-      ).timeout(const Duration(seconds: 30));
+      final Map<String, String> headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      };
+
+      if (_userToken != null) {
+        headers['Authorization'] = 'Bearer $_userToken';
+      }
+
+      final response = await http
+          .post(
+            Uri.parse(url),
+            headers: headers,
+            body: json.encode(requestData),
+          )
+          .timeout(const Duration(seconds: 30));
 
       final duration = DateTime.now().difference(startTime);
       _log('Réponse API reçue en ${duration.inMilliseconds}ms', level: 'INFO');
@@ -659,20 +679,25 @@ class _ScaneState extends State<Scane> with SingleTickerProviderStateMixin {
       final avecJustificatif = result['avec_justificatif'] ?? false;
       final data = result['data'];
       final estEnRetard = data != null && data['est_en_retard'] == true;
-      final estDepartAnticipe = data != null && data['est_depart_anticipe'] == true;
+      final estDepartAnticipe =
+          data != null && data['est_depart_anticipe'] == true;
 
       _log('Code réponse: $responseCode, Message: $message', level: 'INFO');
-      _log('Avec justificatif: $avecJustificatif, En retard: $estEnRetard, Départ anticipé: $estDepartAnticipe', level: 'INFO');
+      _log(
+          'Avec justificatif: $avecJustificatif, En retard: $estEnRetard, Départ anticipé: $estDepartAnticipe',
+          level: 'INFO');
 
       if (responseCode == 200) {
         // Pointage réussi (avec ou sans justificatif)
         _log('Pointage réussi! $message', level: 'SUCCESS');
 
         // Déterminer le type de pointage pour adapter le popup
-        final bool isDepart = message.contains('Au revoir') || message.contains('Départ anticipé');
+        final bool isDepart = message.contains('Au revoir') ||
+            message.contains('Départ anticipé');
         final bool isAvecJustificatif = avecJustificatif;
 
-        String popupTitle = isDepart ? 'DÉPART ENREGISTRÉ' : 'ARRIVÉE ENREGISTRÉE';
+        String popupTitle =
+            isDepart ? 'DÉPART ENREGISTRÉ' : 'ARRIVÉE ENREGISTRÉE';
         String popupSubtitle = '';
 
         if (isDepart) {
@@ -705,7 +730,8 @@ class _ScaneState extends State<Scane> with SingleTickerProviderStateMixin {
         _showSuccessPopup(message, popupTitle, popupSubtitle, isDepart);
       } else if (responseCode == 403 && justificationRequired) {
         // Retard ou départ anticipé détecté - besoin de justificatif
-        _log('Retard/départ anticipé détecté, demande de justificatif', level: 'WARNING');
+        _log('Retard/départ anticipé détecté, demande de justificatif',
+            level: 'WARNING');
         _showJustificatifDialog(message, matricule);
       } else {
         // Autre erreur
@@ -735,7 +761,8 @@ class _ScaneState extends State<Scane> with SingleTickerProviderStateMixin {
     }
   }
 
-  void _showSuccessPopup(String message, String title, String subtitle, bool isDepart) {
+  void _showSuccessPopup(
+      String message, String title, String subtitle, bool isDepart) {
     _log('Affichage popup de succès', level: 'SUCCESS');
     _animationController.reset();
     _animationController.forward();
@@ -855,10 +882,12 @@ class _ScaneState extends State<Scane> with SingleTickerProviderStateMixin {
 
                           // Titre animé (Arrivée/Départ)
                           AnimatedOpacity(
-                            opacity: _animationController.value > 0.5 ? 1.0 : 0.0,
+                            opacity:
+                                _animationController.value > 0.5 ? 1.0 : 0.0,
                             duration: const Duration(milliseconds: 300),
                             child: Transform.translate(
-                              offset: Offset(0, _animationController.value > 0.5 ? 0 : 20),
+                              offset: Offset(
+                                  0, _animationController.value > 0.5 ? 0 : 20),
                               child: Text(
                                 title,
                                 style: TextStyle(
@@ -881,10 +910,12 @@ class _ScaneState extends State<Scane> with SingleTickerProviderStateMixin {
 
                           // Sous-titre (type de pointage)
                           AnimatedOpacity(
-                            opacity: _animationController.value > 0.6 ? 1.0 : 0.0,
+                            opacity:
+                                _animationController.value > 0.6 ? 1.0 : 0.0,
                             duration: const Duration(milliseconds: 300),
                             child: Transform.translate(
-                              offset: Offset(0, _animationController.value > 0.6 ? 0 : 20),
+                              offset: Offset(
+                                  0, _animationController.value > 0.6 ? 0 : 20),
                               child: Text(
                                 subtitle,
                                 textAlign: TextAlign.center,
@@ -901,10 +932,12 @@ class _ScaneState extends State<Scane> with SingleTickerProviderStateMixin {
 
                           // Message de l'API
                           AnimatedOpacity(
-                            opacity: _animationController.value > 0.7 ? 1.0 : 0.0,
+                            opacity:
+                                _animationController.value > 0.7 ? 1.0 : 0.0,
                             duration: const Duration(milliseconds: 300),
                             child: Transform.translate(
-                              offset: Offset(0, _animationController.value > 0.7 ? 0 : 20),
+                              offset: Offset(
+                                  0, _animationController.value > 0.7 ? 0 : 20),
                               child: Container(
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
@@ -928,10 +961,12 @@ class _ScaneState extends State<Scane> with SingleTickerProviderStateMixin {
 
                           // Bouton avec animation
                           AnimatedOpacity(
-                            opacity: _animationController.value > 0.9 ? 1.0 : 0.0,
+                            opacity:
+                                _animationController.value > 0.9 ? 1.0 : 0.0,
                             duration: const Duration(milliseconds: 300),
                             child: Transform.translate(
-                              offset: Offset(0, _animationController.value > 0.9 ? 0 : 20),
+                              offset: Offset(
+                                  0, _animationController.value > 0.9 ? 0 : 20),
                               child: Container(
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(16),
@@ -948,7 +983,8 @@ class _ScaneState extends State<Scane> with SingleTickerProviderStateMixin {
                                     _animationController.reverse().then((_) {
                                       Navigator.of(ctx).pop();
                                       if (widget.back) {
-                                        Navigator.of(context).pop('pointage_reussi');
+                                        Navigator.of(context)
+                                            .pop('pointage_reussi');
                                       }
                                       // Redémarrer le scanner
                                       setState(() {
@@ -1107,10 +1143,12 @@ class _ScaneState extends State<Scane> with SingleTickerProviderStateMixin {
 
                           // Titre
                           AnimatedOpacity(
-                            opacity: _animationController.value > 0.5 ? 1.0 : 0.0,
+                            opacity:
+                                _animationController.value > 0.5 ? 1.0 : 0.0,
                             duration: const Duration(milliseconds: 300),
                             child: Transform.translate(
-                              offset: Offset(0, _animationController.value > 0.5 ? 0 : 20),
+                              offset: Offset(
+                                  0, _animationController.value > 0.5 ? 0 : 20),
                               child: Text(
                                 'ERREUR',
                                 style: TextStyle(
@@ -1133,10 +1171,12 @@ class _ScaneState extends State<Scane> with SingleTickerProviderStateMixin {
 
                           // Message
                           AnimatedOpacity(
-                            opacity: _animationController.value > 0.7 ? 1.0 : 0.0,
+                            opacity:
+                                _animationController.value > 0.7 ? 1.0 : 0.0,
                             duration: const Duration(milliseconds: 300),
                             child: Transform.translate(
-                              offset: Offset(0, _animationController.value > 0.7 ? 0 : 20),
+                              offset: Offset(
+                                  0, _animationController.value > 0.7 ? 0 : 20),
                               child: Text(
                                 message,
                                 textAlign: TextAlign.center,
@@ -1153,10 +1193,12 @@ class _ScaneState extends State<Scane> with SingleTickerProviderStateMixin {
 
                           // Boutons
                           AnimatedOpacity(
-                            opacity: _animationController.value > 0.9 ? 1.0 : 0.0,
+                            opacity:
+                                _animationController.value > 0.9 ? 1.0 : 0.0,
                             duration: const Duration(milliseconds: 300),
                             child: Transform.translate(
-                              offset: Offset(0, _animationController.value > 0.9 ? 0 : 20),
+                              offset: Offset(
+                                  0, _animationController.value > 0.9 ? 0 : 20),
                               child: Row(
                                 children: [
                                   Expanded(
@@ -1165,7 +1207,8 @@ class _ScaneState extends State<Scane> with SingleTickerProviderStateMixin {
                                         borderRadius: BorderRadius.circular(16),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: Colors.black.withOpacity(0.2),
+                                            color:
+                                                Colors.black.withOpacity(0.2),
                                             blurRadius: 10,
                                             offset: const Offset(0, 5),
                                           ),
@@ -1173,7 +1216,9 @@ class _ScaneState extends State<Scane> with SingleTickerProviderStateMixin {
                                       ),
                                       child: ElevatedButton(
                                         onPressed: () {
-                                          _animationController.reverse().then((_) {
+                                          _animationController
+                                              .reverse()
+                                              .then((_) {
                                             Navigator.of(ctx).pop();
                                             // Redémarrer le scanner
                                             setState(() {
@@ -1191,7 +1236,8 @@ class _ScaneState extends State<Scane> with SingleTickerProviderStateMixin {
                                             vertical: 16,
                                           ),
                                           shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(16),
+                                            borderRadius:
+                                                BorderRadius.circular(16),
                                           ),
                                         ),
                                         child: const Text(
@@ -1290,7 +1336,9 @@ class _ScaneState extends State<Scane> with SingleTickerProviderStateMixin {
 
                   // Titre
                   Text(
-                    message.contains('Retard') ? 'Retard détecté' : 'Départ anticipé',
+                    message.contains('Retard')
+                        ? 'Retard détecté'
+                        : 'Départ anticipé',
                     style: TextStyle(
                       color: textColor,
                       fontSize: 20,
@@ -1351,7 +1399,8 @@ class _ScaneState extends State<Scane> with SingleTickerProviderStateMixin {
                     Column(
                       children: [
                         CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(primaryColor),
                         ),
                         const SizedBox(height: 16),
                         Text(
@@ -1368,7 +1417,8 @@ class _ScaneState extends State<Scane> with SingleTickerProviderStateMixin {
                         Expanded(
                           child: OutlinedButton(
                             onPressed: () {
-                              _log('Annulation pointage avec justificatif', level: 'INFO');
+                              _log('Annulation pointage avec justificatif',
+                                  level: 'INFO');
                               Navigator.of(ctx).pop();
                               setState(() {
                                 _isLoading = false;
@@ -1457,8 +1507,7 @@ class _ScannerOverlayPainter extends CustomPainter {
       ..color = Colors.transparent
       ..style = PaintingStyle.fill;
 
-    final path = Path()
-      ..addRect(Rect.fromLTWH(0, 0, size.width, size.height));
+    final path = Path()..addRect(Rect.fromLTWH(0, 0, size.width, size.height));
 
     // Cadre de scan (zone transparente)
     final scanArea = Rect.fromCenter(

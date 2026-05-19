@@ -2,11 +2,14 @@
 
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:madgi_mobile/BlocAcceuil/detail.dart';
 import 'package:madgi_mobile/BlocAcceuil/formulaire.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 
+import 'package:madgi_mobile/BlocAcceuil/informations.dart';
+import 'package:madgi_mobile/BlocAcceuil/profilscreen.dart';
 import 'acceuil.dart';
 
 class Conger extends StatefulWidget {
@@ -41,10 +44,14 @@ class _CongerState extends State<Conger> {
     var headers = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      'Authorization': 'Bearer ${json.decode(prefs.getString('userInfo')!)['token']}'
+      'Authorization':
+          'Bearer ${json.decode(prefs.getString('userInfo')!)['token']}'
     };
-    var request = http.Request('GET', Uri.parse('http://192.168.1.4:8000/api/v1/type-leaves'));
-    request.body = json.encode({'user_id': '${json.decode(prefs.getString('userInfo')!)['user']['id']}'});
+    var request =
+        http.Request('GET', Uri.parse('${dotenv.get('API_URL')}/type-leaves'));
+    request.body = json.encode({
+      'user_id': '${json.decode(prefs.getString('userInfo')!)['user']['id']}'
+    });
     request.headers.addAll(headers);
     http.StreamedResponse response = await request.send();
     final data = await response.stream.bytesToString();
@@ -59,10 +66,14 @@ class _CongerState extends State<Conger> {
       var headers = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'Authorization': 'Bearer ${json.decode(prefs.getString('userInfo')!)['token']}'
+        'Authorization':
+            'Bearer ${json.decode(prefs.getString('userInfo')!)['token']}'
       };
-      var request = http.Request('GET', Uri.parse('http://192.168.1.4:8000/api/v1/leaves'));
-      request.body = json.encode({'user_id': '${json.decode(prefs.getString('userInfo')!)['user']['id']}'});
+      var request =
+          http.Request('GET', Uri.parse('${dotenv.get('API_URL')}/leaves'));
+      request.body = json.encode({
+        'user_id': '${json.decode(prefs.getString('userInfo')!)['user']['id']}'
+      });
       request.headers.addAll(headers);
       http.StreamedResponse response = await request.send();
       final data = await response.stream.bytesToString();
@@ -183,7 +194,8 @@ class _CongerState extends State<Conger> {
         break;
       default:
         backgroundColor = mediumGray;
-        badgeTextColor = textColor; // Maintenant ça référence la constante de classe
+        badgeTextColor =
+            textColor; // Maintenant ça référence la constante de classe
         label = status;
     }
 
@@ -252,16 +264,19 @@ class _CongerState extends State<Conger> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            conge['type'] ?? 'Type non spécifié',
-                            style: TextStyle(
-                              color: textColor,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
+                          Expanded(
+                            child: Text(
+                              conge['type'] ?? 'Type non spécifié',
+                              style: TextStyle(
+                                color: textColor,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
+                          const SizedBox(width: 8),
                           _buildStatusBadge(conge['status'] ?? 'En attente'),
                         ],
                       ),
@@ -274,17 +289,22 @@ class _CongerState extends State<Conger> {
                             size: 14,
                           ),
                           const SizedBox(width: 4),
-                          Text(
-                            "${conge['conge']['start_date']} - ${conge['conge']['end_date']}",
-                            style: TextStyle(
-                              color: textColor.withOpacity(0.7),
-                              fontSize: 12,
+                          Expanded(
+                            child: Text(
+                              "${conge['conge']['start_date']} - ${conge['conge']['end_date']}",
+                              style: TextStyle(
+                                color: textColor.withOpacity(0.7),
+                                fontSize: 12,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 4),
-                      if (conge['conge']['place_enjoyment']?.isNotEmpty ?? false)
+                      if (conge['conge']['place_enjoyment']?.isNotEmpty ??
+                          false)
                         Row(
                           children: [
                             Icon(
@@ -428,7 +448,8 @@ class _CongerState extends State<Conger> {
                           ),
                         ),
                         IconButton(
-                          icon: Icon(Icons.close, color: textColor.withOpacity(0.6)),
+                          icon: Icon(Icons.close,
+                              color: textColor.withOpacity(0.6)),
                           onPressed: () => Navigator.pop(context),
                         ),
                       ],
@@ -446,7 +467,8 @@ class _CongerState extends State<Conger> {
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: types.length,
-                      separatorBuilder: (context, index) => const SizedBox(height: 12),
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: 12),
                       itemBuilder: (context, index) {
                         final type = types[index];
                         return Material(
@@ -458,7 +480,8 @@ class _CongerState extends State<Conger> {
                               Navigator.pushReplacement(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => Formulaire(typeId: type['id']),
+                                  builder: (context) =>
+                                      Formulaire(typeId: type['id']),
                                 ),
                               );
                             },
@@ -559,34 +582,140 @@ class _CongerState extends State<Conger> {
                 },
                 child: _isLoading
                     ? const Center(
-                  child: CircularProgressIndicator(
-                    color: primaryColor,
-                  ),
-                )
+                        child: CircularProgressIndicator(
+                          color: primaryColor,
+                        ),
+                      )
                     : (conges == null || conges.isEmpty)
-                    ? _buildEmptyState()
-                    : ListView.builder(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  itemCount: conges.length,
-                  itemBuilder: (context, index) {
-                    return _buildCongeCard(conges[index]);
-                  },
-                ),
+                        ? _buildEmptyState()
+                        : ListView.builder(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            itemCount: conges.length,
+                            itemBuilder: (context, index) {
+                              return _buildCongeCard(conges[index]);
+                            },
+                          ),
               ),
             ),
           ],
         ),
       ),
+      /*
       floatingActionButton: conges != null && conges.isNotEmpty
           ? FloatingActionButton(
-        onPressed: () => _showBottomSheet(context),
-        backgroundColor: primaryColor,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: const Icon(Icons.add, color: Colors.white),
-      )
+              onPressed: () => _showBottomSheet(context),
+              backgroundColor: primaryColor,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Icon(Icons.add, color: Colors.white, size: 28),
+            )
           : null,
+      */
+      bottomNavigationBar: Container(
+        height: MediaQuery.of(context).padding.bottom > 0 ? 85 : 70,
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 20,
+              offset: const Offset(0, -2),
+            ),
+          ],
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
+        ),
+        child: Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).padding.bottom > 0
+                ? MediaQuery.of(context).padding.bottom
+                : 10,
+            top: 5,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildNavItem(
+                icon: Icons.home_filled,
+                label: 'Accueil',
+                isActive: false,
+                onTap: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const Accueil(),
+                    ),
+                  );
+                },
+              ),
+              _buildNavItem(
+                icon: Icons.beach_access,
+                label: 'Congés',
+                isActive: true,
+              ),
+              _buildNavItem(
+                icon: Icons.info_outline,
+                label: 'Infos',
+                isActive: false,
+                onTap: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const Informations(),
+                    ),
+                  );
+                },
+              ),
+              _buildNavItem(
+                icon: Icons.person_outline,
+                label: 'Profil',
+                isActive: false,
+                onTap: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ProfileScreen(),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem({
+    required IconData icon,
+    required String label,
+    required bool isActive,
+    VoidCallback? onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            color: isActive ? primaryColor : textColor.withOpacity(0.4),
+            size: 26,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              color: isActive ? primaryColor : textColor.withOpacity(0.4),
+              fontSize: 12,
+              fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

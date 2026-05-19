@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:madgi_mobile/BlocAcceuil/acceuil.dart';
 import 'package:madgi_mobile/BlocAcceuil/apercu.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -32,10 +33,14 @@ class _NotificationsState extends State<Notifications> {
       var headers = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'Authorization': 'Bearer ${json.decode(prefs.getString('userInfo')!)['token']}'
+        'Authorization':
+            'Bearer ${json.decode(prefs.getString('userInfo')!)['token']}'
       };
-      var request = http.Request('GET', Uri.parse('http://192.168.1.4:8000/api/v1/user-info'));
-      request.body = json.encode({'user_id': '${json.decode(prefs.getString('userInfo')!)['user']['id']}'});
+      var request = http.Request(
+          'GET', Uri.parse('${dotenv.get('API_URL')}/user-info'));
+      request.body = json.encode({
+        'user_id': '${json.decode(prefs.getString('userInfo')!)['user']['id']}'
+      });
       request.headers.addAll(headers);
       http.StreamedResponse response = await request.send();
       final data = await response.stream.bytesToString();
@@ -53,10 +58,14 @@ class _NotificationsState extends State<Notifications> {
       var headers = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'Authorization': 'Bearer ${json.decode(prefs.getString('userInfo')!)['token']}'
+        'Authorization':
+            'Bearer ${json.decode(prefs.getString('userInfo')!)['token']}'
       };
-      var request = http.Request('GET', Uri.parse('http://192.168.1.4:8000/api/v1/infos'));
-      request.body = json.encode({'user_id': '${json.decode(prefs.getString('userInfo')!)['user']['id']}'});
+      var request =
+          http.Request('GET', Uri.parse('${dotenv.get('API_URL')}/infos'));
+      request.body = json.encode({
+        'user_id': '${json.decode(prefs.getString('userInfo')!)['user']['id']}'
+      });
       request.headers.addAll(headers);
       http.StreamedResponse response = await request.send();
       final data = await response.stream.bytesToString();
@@ -138,7 +147,8 @@ class _NotificationsState extends State<Notifications> {
   bool _isNotificationRead(Map<String, dynamic> notification) {
     return notification['info']['userinfos'] != null &&
         notification['info']['userinfos']['user_id'] == userInfo?['id'] &&
-        notification['info']['userinfos']['info_id'] == notification['info']['id'];
+        notification['info']['userinfos']['info_id'] ==
+            notification['info']['id'];
   }
 
   Widget _buildNotificationBadge(bool isRead) {
@@ -178,7 +188,8 @@ class _NotificationsState extends State<Notifications> {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
-                builder: (context) => Apercu(title: 'notification', data: notification),
+                builder: (context) =>
+                    Apercu(title: 'notification', data: notification),
               ),
             );
           },
@@ -240,7 +251,8 @@ class _NotificationsState extends State<Notifications> {
                           ),
                           if (hasMedia)
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
                                 color: secondaryColor.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(4),
@@ -392,14 +404,15 @@ class _NotificationsState extends State<Notifications> {
                 child: _isLoading
                     ? _buildLoadingState()
                     : (infos == null || infos.isEmpty)
-                    ? _buildEmptyState()
-                    : ListView.builder(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  itemCount: infos.length,
-                  itemBuilder: (context, index) {
-                    return _buildNotificationCard(infos[index], index);
-                  },
-                ),
+                        ? _buildEmptyState()
+                        : ListView.builder(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            itemCount: infos.length,
+                            itemBuilder: (context, index) {
+                              return _buildNotificationCard(
+                                  infos[index], index);
+                            },
+                          ),
               ),
             ),
           ],
