@@ -307,8 +307,6 @@ class _CliqueState extends State<Clique> {
       final justificationRequired = result['justification_required'] ?? false;
 
       if (responseCode == 200) {
-        _showSuccessSnackbar(
-            result['message'] ?? 'Pointage enregistré avec succès');
         await getRegister();
         if (mounted) {
           _showPointageDetail(result['data'], message);
@@ -331,7 +329,23 @@ class _CliqueState extends State<Clique> {
   }
 
   // Afficher le détail du pointage
-  void _showPointageDetail(dynamic pointageData, String message) {
+  void _showPointageDetail(dynamic pointageData, String apiMessage) {
+    bool hasData = pointageData != null && pointageData is Map;
+    String nom = hasData ? (pointageData['nom'] ?? userName ?? '') : (userName ?? '');
+    String prenom = hasData ? (pointageData['prenom'] ?? '') : '';
+    String civilite = hasData ? (pointageData['civilite'] ?? 'Mr/Mme/Mle') : 'Mr/Mme/Mle';
+    
+    bool isDepart = false;
+    if (apiMessage.toLowerCase().contains('au revoir') || 
+        apiMessage.toLowerCase().contains('départ') || 
+        (hasData && pointageData['heure_depart'] != null)) {
+      isDepart = true;
+    }
+
+    String titleMessage = isDepart 
+        ? "Au revoir $civilite $nom $prenom".trim()
+        : "Bienvenue $civilite $nom $prenom".trim();
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -363,7 +377,7 @@ class _CliqueState extends State<Clique> {
               ),
               const SizedBox(height: 16),
               Text(
-                message.isNotEmpty ? message : 'Pointage validé',
+                titleMessage,
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: textColor,
@@ -371,8 +385,19 @@ class _CliqueState extends State<Clique> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
+              if (apiMessage.isNotEmpty && apiMessage != 'Pointage validé') ...[
+                const SizedBox(height: 8),
+                Text(
+                  apiMessage,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: textColor.withOpacity(0.7),
+                    fontSize: 14,
+                  ),
+                ),
+              ],
               const SizedBox(height: 8),
-              if (pointageData != null)
+              if (hasData)
                 Column(
                   children: [
                     const SizedBox(height: 16),

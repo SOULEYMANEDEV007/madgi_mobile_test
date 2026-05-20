@@ -10,6 +10,7 @@ import 'password.dart';
 import 'splash_screen.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'dart:io';
+import 'session_manager.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -45,8 +46,12 @@ class MyHttpOverrides extends HttpOverrides {
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Madgi Mobile',
+    return SessionManager(
+      // Durée d'inactivité avant déconnexion : 15 minutes par défaut
+      timeoutDuration: const Duration(minutes: 15),
+      child: MaterialApp(
+        navigatorKey: globalNavigatorKey,
+        title: 'Madgi Mobile',
       theme: ThemeData(
         primaryColor: const Color(0xFF406ACC),
         scaffoldBackgroundColor: Colors.white,
@@ -93,6 +98,7 @@ class MyApp extends StatelessWidget {
       },
       debugShowCheckedModeBanner: false,
       home: const SplashScreen(),
+      ),
     );
   }
 }

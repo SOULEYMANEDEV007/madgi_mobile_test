@@ -42,6 +42,7 @@ class _ScaneState extends State<Scane> with SingleTickerProviderStateMixin {
   String? _userMatricule;
   String? _userId;
   String? _userPrenom;
+  String? _userNom;
   String? _userToken;
   TextEditingController _justificatifController = TextEditingController();
 
@@ -148,6 +149,7 @@ class _ScaneState extends State<Scane> with SingleTickerProviderStateMixin {
         _userMatricule = userInfo['user']['matricule']?.toString();
         _userId = userInfo['user']['id']?.toString();
         _userPrenom = userInfo['user']['prenom']?.toString();
+        _userNom = userInfo['user']['nom']?.toString();
         _userToken = userInfo['token']?.toString();
       });
       _log('Matricule utilisateur chargé: $_userMatricule', level: 'SUCCESS');
@@ -696,8 +698,12 @@ class _ScaneState extends State<Scane> with SingleTickerProviderStateMixin {
             message.contains('Départ anticipé');
         final bool isAvecJustificatif = avecJustificatif;
 
+        String prenomStr = _userPrenom ?? '';
+        String nomStr = _userNom ?? '';
+        String fullName = '$prenomStr $nomStr'.trim().toUpperCase();
+
         String popupTitle =
-            isDepart ? 'DÉPART ENREGISTRÉ' : 'ARRIVÉE ENREGISTRÉE';
+            isDepart ? 'AU REVOIR $fullName'.trim() : 'BIENVENUE $fullName'.trim();
         String popupSubtitle = '';
 
         if (isDepart) {
